@@ -3,13 +3,14 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
-  SelfQRcode as SelfQRcodeWrapper,
+  SelfQRcodeWrapper,
   SelfAppBuilder,
   type SelfApp,
   countries,
   getUniversalLink,
 } from "@selfxyz/qrcode";
 import { useAccount } from "wagmi";
+
 
 
 export default function Home() {
@@ -19,22 +20,48 @@ export default function Home() {
   const [toastMessage, setToastMessage] = useState("");
   const [selfApp, setSelfApp] = useState<SelfApp | null>(null);
   const [universalLink, setUniversalLink] = useState("");
+  const [verificationStatus, setVerificationStatus] = useState<'idle' | 'mobile_connected' | 'verifying' | 'verified'>('idle');
   const { address } = useAccount();
   // Use useMemo to cache the array to avoid creating a new array on each render
   const excludedCountries = useMemo(() => [countries.UNITED_STATES], []);
+
+  // Listen for WebSocket events by intercepting console logs
+  useEffect(() => {
+    const originalLog = console.log;
+
+    console.log = function(...args) {
+      // Check for WebSocket status messages
+      const message = args.join(' ');
+
+      if (message.includes('[WebSocket] Mobile device connected')) {
+        setVerificationStatus('mobile_connected');
+        displayToast("📱 Mobile device connected!");
+      } else if (message.includes('[WebSocket] Received mobile status: proof_verified')) {
+        setVerificationStatus('verified');
+        displayToast("✅ Verification successful!");
+      }
+
+      // Call original console.log
+      originalLog.apply(console, args);
+    };
+
+    return () => {
+      // Restore original console.log
+      console.log = originalLog;
+    };
+  }, []);
 
   // Use useEffect to ensure code only executes on the client side
   useEffect(() => {
     try {
       const app = new SelfAppBuilder({
         version: 2,
-        appName: process.env.NEXT_PUBLIC_SELF_APP_NAME || "Self Workshop",
-        scope: process.env.NEXT_PUBLIC_SELF_SCOPE || "self-workshop",
-        endpoint: `${process.env.NEXT_PUBLIC_SELF_ENDPOINT}`,
-        devMode: true,
+        appName: process.env.NEXT_PUBLIC_SELF_APP_NAME || "DataFi",
+        scope: process.env.NEXT_PUBLIC_SELF_SCOPE || "datafi_ScopeSeed",
+        endpoint: process.env.NEXT_PUBLIC_SELF_ENDPOINT,
         logoBase64:
           "https://i.postimg.cc/mrmVf9hm/self.png", // url of a png image, base64 is accepted but not recommended
-        userId: address,
+        userId: address as string,
         chainID: 42220,
         endpointType: "staging_celo",
         userIdType: "hex", // use 'hex' for ethereum address or 'uuid' for uuidv4
@@ -64,7 +91,7 @@ export default function Home() {
     } catch (error) {
       console.error("Failed to initialize Self app:", error);
     }
-  }, [excludedCountries, address]);
+  }, [excludedCountries, address as string]);
 
   const displayToast = (message: string) => {
     setToastMessage(message);
@@ -95,8 +122,19 @@ export default function Home() {
     displayToast("Opening Self App...");
   };
 
+  const handleMobileConnected = () => {
+    setVerificationStatus('mobile_connected');
+    displayToast("📱 Mobile device connected!");
+  };
+
+  const handleVerifying = () => {
+    setVerificationStatus('verifying');
+    displayToast("🔍 Verifying your identity...");
+  };
+
   const handleSuccessfulVerification = () => {
-    displayToast("Verification successful!");
+    setVerificationStatus('verified');
+    displayToast("✅ Verification successful!");
     setTimeout(() => {
       router.push("/dashboard");
     }, 1500);
@@ -112,6 +150,19 @@ export default function Home() {
         <p className="text-sm sm:text-base text-gray-600 px-2">
           Scan QR code with Self Protocol App to verify your identity
         </p>
+        {verificationStatus !== 'idle' && (
+          <div className="mt-2 text-sm">
+            {verificationStatus === 'mobile_connected' && (
+              <span className="text-blue-600">📱 Mobile connected</span>
+            )}
+            {verificationStatus === 'verifying' && (
+              <span className="text-yellow-600">🔍 Verifying...</span>
+            )}
+            {verificationStatus === 'verified' && (
+              <span className="text-green-600">✅ Verified!</span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Main content */}
