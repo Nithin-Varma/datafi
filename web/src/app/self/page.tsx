@@ -13,7 +13,7 @@ import { useAccount } from "wagmi";
 
 
 export default function Home() {
-//   const router = useRouter();
+  const router = useRouter();
   const [linkCopied, setLinkCopied] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
@@ -31,9 +31,11 @@ export default function Home() {
         appName: process.env.NEXT_PUBLIC_SELF_APP_NAME || "Self Workshop",
         scope: process.env.NEXT_PUBLIC_SELF_SCOPE || "self-workshop",
         endpoint: `${process.env.NEXT_PUBLIC_SELF_ENDPOINT}`,
+        devMode: true,
         logoBase64:
           "https://i.postimg.cc/mrmVf9hm/self.png", // url of a png image, base64 is accepted but not recommended
         userId: address,
+        chainID: 42220,
         endpointType: "staging_celo",
         userIdType: "hex", // use 'hex' for ethereum address or 'uuid' for uuidv4
         userDefinedData: "Your are about to verify your identity with DataFi, dont worry you are in safe hands.",
@@ -53,8 +55,12 @@ export default function Home() {
         }
       }).build();
 
+      console.log("App:", app);
+
       setSelfApp(app);
       setUniversalLink(getUniversalLink(app));
+      console.log("Universal link:", getUniversalLink(app));
+      console.log("Self app:", app);
     } catch (error) {
       console.error("Failed to initialize Self app:", error);
     }
@@ -91,6 +97,9 @@ export default function Home() {
 
   const handleSuccessfulVerification = () => {
     displayToast("Verification successful!");
+    setTimeout(() => {
+      router.push("/dashboard");
+    }, 1500);
   };
 
   return (

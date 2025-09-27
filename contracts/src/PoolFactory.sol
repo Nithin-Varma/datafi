@@ -15,7 +15,8 @@ contract PoolFactory {
         string memory _dataType,
         uint256 _pricePerData,
         uint256 _totalBudget,
-        uint256 _deadline
+        uint256 _deadline,
+        uint256 _owner
     ) external returns (address) {
         require(_pricePerData > 0, "Price must be greater than 0");
         require(_totalBudget > 0, "Budget must be greater than 0");
@@ -28,7 +29,7 @@ contract PoolFactory {
             _pricePerData,
             _totalBudget,
             _deadline,
-            msg.sender
+            _owner
         );
         
         address poolAddress = address(newPool);
