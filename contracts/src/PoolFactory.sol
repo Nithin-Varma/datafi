@@ -39,6 +39,16 @@ contract PoolFactory {
         return poolAddress;
     }
 
+    function joinPool(address _poolAddress) external {
+        Pool pool = Pool(payable(_poolAddress));
+        pool.joinPool();
+    }
+
+    function verifySeller(address _poolAddress, address _seller, bool _verified) external {
+        Pool pool = Pool(payable(_poolAddress));
+        pool.verifySeller(_seller, _verified);
+    }
+
     function getAllPools() external view returns (address[] memory) {
         return allPools;
     }

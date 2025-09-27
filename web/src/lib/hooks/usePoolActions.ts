@@ -41,20 +41,20 @@ export function useCreatePool() {
   };
 }
 
-// Hook for joining a pool
+// Hook for joining a pool through user contract
 export function useJoinPool() {
   const joinPool = useWriteContract();
   const { isLoading, isSuccess, error } = useWaitForTransactionReceipt({
     hash: joinPool.data,
   });
 
-  const joinPoolAction = async (poolAddress: string) => {
+  const joinPoolAction = async (userContractAddress: string, poolAddress: string) => {
     try {
       await joinPool.writeContract({
-        address: poolAddress as `0x${string}`,
-        abi: POOL_ABI,
+        address: userContractAddress as `0x${string}`,
+        abi: USER_ABI,
         functionName: "joinPool",
-        args: [],
+        args: [poolAddress],
         value: 0n,
       });
     } catch (err) {

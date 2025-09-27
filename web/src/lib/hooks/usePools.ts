@@ -100,16 +100,6 @@ export function usePoolDetails(poolAddress: string) {
     functionName: "getSellers",
   });
 
-  // Debug logging
-  console.log("usePoolDetails debug:", {
-    poolAddress,
-    poolInfo,
-    poolInfoError,
-    sellersCount,
-    sellersCountError,
-    sellers,
-    sellersError
-  });
 
   return {
     poolInfo,

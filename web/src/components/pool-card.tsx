@@ -1,7 +1,10 @@
 "use client";
 
 import { usePoolDetails } from "@/lib/hooks/usePools";
+import { useJoinPool } from "@/lib/hooks/usePoolActions";
+import { useUser } from "@/lib/hooks/useUser";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 interface PoolCardProps {
   poolAddress: string;
@@ -12,9 +15,17 @@ interface PoolCardProps {
 
 export function PoolCard({ poolAddress, onJoin, onBuy, onViewDetails }: PoolCardProps) {
   const { poolInfo, verifiedSellersCount, totalSellers, isLoading, error } = usePoolDetails(poolAddress);
+  const { userContract } = useUser();
+  const { joinPool, isLoading: isJoining, isSuccess: joinedSuccessfully } = useJoinPool();
+  const [isJoiningPool, setIsJoiningPool] = useState(false);
 
-  // Debug logging
-  console.log("PoolCard debug:", { poolAddress, poolInfo, isLoading, error });
+
+  // Show success message when joined
+  if (joinedSuccessfully) {
+    setTimeout(() => {
+      alert("Successfully joined the pool! You can now submit data.");
+    }, 1000);
+  }
 
   if (isLoading) {
     return (
@@ -122,17 +133,42 @@ export function PoolCard({ poolAddress, onJoin, onBuy, onViewDetails }: PoolCard
         
         <div className="flex space-x-2">
           <Button
-            onClick={() => {
+            onClick={async () => {
               if (verifiedSellersCount > 0 && onBuy) {
                 onBuy(poolAddress);
-              } else if (onJoin) {
-                onJoin(poolAddress);
+              } else {
+                // Join pool functionality
+                if (userContract) {
+                  setIsJoiningPool(true);
+                  try {
+                    await joinPool(userContract, poolAddress);
+                    if (onJoin) {
+                      onJoin(poolAddress);
+                    }
+                  } catch (error) {
+                    console.error("Failed to join pool:", error);
+                    alert("Failed to join pool. Please try again.");
+                  } finally {
+                    setIsJoiningPool(false);
+                  }
+                } else {
+                  alert("Please create a user account first.");
+                }
               }
             }}
-            disabled={!poolInfo.isActive || isPoolExpired(poolInfo.deadline)}
+            disabled={!poolInfo.isActive || isPoolExpired(poolInfo.deadline) || isJoiningPool || isJoining}
             className="flex-1 bg-gradient-to-r from-blue-600 to-blue-800 text-white font-semibold px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 text-sm"
           >
-            {verifiedSellersCount > 0 ? "💰 Buy" : "🚀 join as a seller"}
+            {isJoiningPool || isJoining ? (
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white"></div>
+                <span>Joining...</span>
+              </div>
+            ) : verifiedSellersCount > 0 ? (
+              "💰 Buy"
+            ) : (
+              "🚀 Join as Seller"
+            )}
           </Button>
           
           <Button

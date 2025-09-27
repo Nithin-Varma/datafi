@@ -1,7 +1,7 @@
 // Contract addresses - Update these with your deployed contract addresses
 export const CONTRACT_ADDRESSES = {
-  USER_FACTORY: "0x441A639ef7F54B17d022767D4B1CF832EE17e00D",
-  POOL_FACTORY: "0x22e839A53E7e93fF6FE09b8F1634056ADa6B434a",
+  USER_FACTORY: "0x2c80D5845BC9Cee02Bf3eA82cD1A0Ec1e5FF3dbd",
+  POOL_FACTORY: "0x04B9aea3a6Df96B36756ef23FaFd7123F788770d",
 } as const;
 
 // WalletConnect Project ID - Get from https://cloud.walletconnect.com/
@@ -64,6 +64,13 @@ export const POOL_FACTORY_ABI = [
     ],
     "name": "createPool",
     "outputs": [{"name": "", "type": "address"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "_poolAddress", "type": "address"}],
+    "name": "joinPool",
+    "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },

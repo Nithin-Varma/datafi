@@ -17,6 +17,7 @@ contract Pool {
 
     PoolInfo public poolInfo;
     address[] public sellers;
+    mapping(address => bool) public verifiedSellers;
     uint256 public totalDataCollected;
 
     event PoolCreated(string name, string dataType, uint256 pricePerData, uint256 totalBudget);
@@ -49,11 +50,19 @@ contract Pool {
     }
 
     function joinPool() external {
+        require(msg.sender != poolInfo.creator, "Creator cannot join pool");
         require(poolInfo.isActive, "Pool is not active");
         require(block.timestamp <= poolInfo.deadline, "Pool deadline passed");
         
         sellers.push(msg.sender);
         emit SellerJoined(msg.sender);
+    }
+
+    function verifySeller(address _seller, bool _verified) external {
+        require(poolInfo.isActive, "Pool is not active");
+        require(block.timestamp <= poolInfo.deadline, "Pool deadline passed");
+        require(!verifiedSellers[_seller], "Seller is already verified");
+        verifiedSellers[_seller] = _verified;
     }
 
     function purchaseData() external payable {

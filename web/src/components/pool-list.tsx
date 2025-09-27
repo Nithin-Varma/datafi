@@ -13,8 +13,6 @@ export function PoolList() {
   // Get all pools using the hook
   const { allPools, isLoading: allPoolsLoading } = useAllPools();
 
-  // Debug logging
-  console.log("PoolList debug:", { allPools, allPoolsLoading });
   
   // Get pools by data type
   const { pools: emailPools, isLoading: emailPoolsLoading } = usePoolsByDataType("email");
@@ -112,13 +110,16 @@ export function PoolList() {
                   key={poolAddress}
                   poolAddress={poolAddress}
                   onJoin={(address) => {
-                    console.log("Join pool:", address);
+                    console.log("Successfully joined pool:", address);
+                    // You could add a toast notification here
                   }}
                   onBuy={(address) => {
                     console.log("Buy data from pool:", address);
+                    // Implement purchase functionality here
                   }}
                   onViewDetails={(address) => {
                     console.log("View pool details:", address);
+                    // Implement view details functionality here
                   }}
                 />
               ))}

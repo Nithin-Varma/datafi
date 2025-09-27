@@ -10,6 +10,7 @@ contract User {
     uint256 public totalSpent;
     uint256 public totalEarned;
     address public poolFactory;
+    PoolFactory public factory;
 
     event PoolCreated(address indexed poolAddress);
     event PoolJoined(address indexed poolAddress);
@@ -17,6 +18,7 @@ contract User {
     constructor(address _owner, address _poolFactory) {
         owner = _owner;
         poolFactory = _poolFactory;
+        factory = PoolFactory(poolFactory);
     }
 
     function createPool(
@@ -29,7 +31,6 @@ contract User {
     ) external returns (address) {
         require(msg.sender == owner, "Only owner can create pools");
         
-        PoolFactory factory = PoolFactory(poolFactory);
         address poolAddress = factory.createPool(
             _name,
             _description,
@@ -47,8 +48,14 @@ contract User {
 
     function joinPool(address _poolAddress) external {
         require(msg.sender == owner, "Only owner can join pools");
+        factory.joinPool(_poolAddress);
         joinedPools.push(_poolAddress);
         emit PoolJoined(_poolAddress);
+    }
+
+    function verifySeller(address _poolAddress, address _seller, bool _verified) external {
+        require(msg.sender == owner, "Only owner can verify sellers");
+        factory.verifySeller(_poolAddress, _seller, _verified);
     }
 
     function recordSpending(uint256 _amount) external {
