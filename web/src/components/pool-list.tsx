@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAllPools, usePoolsByDataType } from "@/lib/hooks/usePools";
 import { PoolCard } from "@/components/pool-card";
+import { PoolListSkeleton } from "@/components/skeleton-loading";
 
 
 
@@ -32,11 +33,7 @@ export function PoolList() {
 
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <PoolListSkeleton />;
   }
 
   return (

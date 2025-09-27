@@ -10,6 +10,11 @@ export function useUserCreatedPools(userContractAddress: string) {
     address: userContractAddress as `0x${string}`,
     abi: USER_ABI,
     functionName: "getCreatedPools",
+    query: {
+      staleTime: 20000, // Cache for 20 seconds
+      refetchInterval: 60000, // Refetch every minute
+      enabled: !!userContractAddress, // Only run if user contract exists
+    },
   });
 
   return {
@@ -25,6 +30,11 @@ export function useUserJoinedPools(userContractAddress: string) {
     address: userContractAddress as `0x${string}`,
     abi: USER_ABI,
     functionName: "getJoinedPools",
+    query: {
+      staleTime: 20000, // Cache for 20 seconds
+      refetchInterval: 60000, // Refetch every minute
+      enabled: !!userContractAddress, // Only run if user contract exists
+    },
   });
 
   return {

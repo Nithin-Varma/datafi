@@ -29,10 +29,10 @@ contract User {
         uint256 _pricePerData,
         uint256 _totalBudget,
         uint256 _deadline
-    ) external returns (address) {
+    ) external payable returns (address) {
         require(msg.sender == owner, "Only owner can create pools");
         
-        address poolAddress = factory.createPool(
+        address poolAddress = factory.createPool{value: msg.value}(
             _name,
             _description,
             _dataType,
@@ -93,6 +93,14 @@ contract User {
 
     function getJoinedPoolsCount() external view returns (uint256) {
         return joinedPools.length;
+    }
+
+    function getTotalSpent() external view returns (uint256) {
+        return totalSpent;
+    }
+
+    function getTotalEarned() external view returns (uint256) {
+        return totalEarned;
     }
 
     receive() external payable {}

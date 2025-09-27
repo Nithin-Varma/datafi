@@ -26,12 +26,12 @@ export function useCreatePool() {
     deadline: bigint
   ) => {
     try {
-      // Try calling PoolFactory directly first
+      // Call User contract which will then call PoolFactory
       await createPool.writeContract({
-        address: CONTRACT_ADDRESSES.POOL_FACTORY as `0x${string}`,
-        abi: POOL_FACTORY_ABI,
+        address: userContractAddress as `0x${string}`,
+        abi: USER_ABI,
         functionName: "createPool",
-        args: [name, description, dataType, proofRequirements, pricePerData, totalBudget, deadline, userContractAddress],
+        args: [name, description, dataType, proofRequirements, pricePerData, totalBudget, deadline],
         value: totalBudget, // Send the total budget as ETH
       });
     } catch (err) {

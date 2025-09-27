@@ -14,7 +14,15 @@ const config = getDefaultConfig({
   ssr: true,
 });
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30000, // 30 seconds
+      refetchOnWindowFocus: false,
+      retry: 2,
+    },
+  },
+});
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (

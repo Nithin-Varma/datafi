@@ -9,6 +9,10 @@ export function useAllPools() {
     address: CONTRACT_ADDRESSES.POOL_FACTORY as `0x${string}`,
     abi: POOL_FACTORY_ABI,
     functionName: "getAllPools",
+    query: {
+      staleTime: 30000, // Cache for 30 seconds
+      refetchInterval: 60000, // Refetch every minute
+    },
   });
 
   return {
@@ -86,18 +90,30 @@ export function usePoolDetails(poolAddress: string) {
     address: poolAddress as `0x${string}`,
     abi: POOL_ABI,
     functionName: "getPoolInfo",
+    query: {
+      staleTime: 15000, // Cache for 15 seconds
+      refetchInterval: 30000, // Refetch every 30 seconds
+    },
   });
 
   const { data: sellersCount, isLoading: sellersCountLoading, error: sellersCountError } = useReadContract({
     address: poolAddress as `0x${string}`,
     abi: POOL_ABI,
-    functionName: "getSellersCount",
+    functionName: "getJoinedSellersCount",
+    query: {
+      staleTime: 10000, // Cache for 10 seconds
+      refetchInterval: 20000, // Refetch every 20 seconds
+    },
   });
 
   const { data: sellers, isLoading: sellersLoading, error: sellersError } = useReadContract({
     address: poolAddress as `0x${string}`,
     abi: POOL_ABI,
-    functionName: "getSellers",
+    functionName: "getJoinedSellers",
+    query: {
+      staleTime: 10000, // Cache for 10 seconds
+      refetchInterval: 20000, // Refetch every 20 seconds
+    },
   });
 
 

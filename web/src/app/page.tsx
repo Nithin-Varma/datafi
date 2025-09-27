@@ -25,13 +25,24 @@ export default function Home() {
 
   // Auto-redirect after user creation
   useEffect(() => {
+    console.log("Redirect check:", { userCreated, isInitialized, isUserCreated });
     if (userCreated && isInitialized) {
+      console.log("User created, showing success and redirecting...");
       setShowSuccess(true);
       setTimeout(() => {
         router.push('/dashboard');
       }, 2000);
     }
   }, [userCreated, router, isInitialized]);
+
+  // Also redirect if user is created (fallback)
+  useEffect(() => {
+    console.log("Fallback redirect check:", { isUserCreated, isInitialized, showSuccess });
+    if (isUserCreated && isInitialized && !showSuccess) {
+      console.log("User is created, redirecting to dashboard...");
+      router.push('/dashboard');
+    }
+  }, [isUserCreated, router, isInitialized, showSuccess]);
 
   // Show loading state
   if (isLoading || !isInitialized) {
@@ -53,7 +64,13 @@ export default function Home() {
         <div className="text-center animate-bounce">
           <div className="text-6xl mb-6">🎉</div>
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Welcome to DataFi!</h2>
-          <p className="text-gray-600 text-lg">Redirecting to your dashboard...</p>
+          <p className="text-gray-600 text-lg mb-6">Redirecting to your dashboard...</p>
+          <Link 
+            href="/dashboard" 
+            className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+          >
+            Go to Dashboard
+          </Link>
         </div>
       </div>
     );

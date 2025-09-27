@@ -90,6 +90,8 @@ export function useUser() {
   useEffect(() => {
     if (userCreated) {
       console.log("User created, refreshing data...");
+      // Force update the user state immediately
+      setIsUserCreated(true);
       // Add a small delay to prevent rapid re-renders
       setTimeout(() => {
         // The data will be refetched automatically by the hooks

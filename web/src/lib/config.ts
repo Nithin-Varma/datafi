@@ -136,7 +136,7 @@ export const USER_ABI = [
     ],
     "name": "createPool",
     "outputs": [{"name": "", "type": "address"}],
-    "stateMutability": "nonpayable",
+    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -222,6 +222,12 @@ export const POOL_ABI = [
           {"name": "name", "type": "string"},
           {"name": "description", "type": "string"},
           {"name": "dataType", "type": "string"},
+          {"name": "proofRequirements", "type": "tuple[]", "components": [
+            {"name": "name", "type": "string"},
+            {"name": "description", "type": "string"},
+            {"name": "proofType", "type": "uint8"},
+            {"name": "isRequired", "type": "bool"}
+          ]},
           {"name": "pricePerData", "type": "uint256"},
           {"name": "totalBudget", "type": "uint256"},
           {"name": "remainingBudget", "type": "uint256"},
@@ -317,6 +323,34 @@ export const POOL_ABI = [
         "type": "tuple[]"
       }
     ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getJoinedSellers",
+    "outputs": [{"name": "", "type": "address[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getJoinedSellersCount",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getVerifiedSellers",
+    "outputs": [{"name": "", "type": "address[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getVerifiedSellersCount",
+    "outputs": [{"name": "", "type": "uint256"}],
     "stateMutability": "view",
     "type": "function"
   }

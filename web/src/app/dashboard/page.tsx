@@ -6,13 +6,14 @@ import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Link from "next/link";
+import { DashboardSkeleton } from "@/components/skeleton-loading";
 
 export default function Dashboard() {
   const { isConnected } = useAccount();
   const { isUserCreated, isLoading, userEOA, userContractAddress } = useUser();
   const router = useRouter();
 
-  // Get user's pool counts and financial stats
+  // Get user's pool counts and financial stats (with caching)
   const { createdCount, joinedCount, isLoading: countsLoading } = useUserPoolCounts(userContractAddress || "");
   const { totalSpent, totalEarned, isLoading: financialLoading } = useUserFinancialStats(userContractAddress || "");
   
@@ -20,7 +21,8 @@ export default function Dashboard() {
   const { createdPools, isLoading: createdPoolsLoading } = useUserCreatedPoolsWithDetails(userContractAddress || "");
   const { joinedPools, isLoading: joinedPoolsLoading } = useUserJoinedPoolsWithDetails(userContractAddress || "");
 
-  const isLoadingData = isLoading || countsLoading || financialLoading || createdPoolsLoading || joinedPoolsLoading;
+  // Only show loading if we don't have user contract address yet
+  const isLoadingData = isLoading || (!userContractAddress && (countsLoading || financialLoading || createdPoolsLoading || joinedPoolsLoading));
 
   // Debug logging
   console.log("Dashboard debug:", { isConnected, isUserCreated, isLoading });
@@ -33,15 +35,7 @@ export default function Dashboard() {
   }, [isConnected, router]);
 
   if (isLoadingData) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-600 mx-auto mb-4"></div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">Loading Dashboard</h3>
-          <p className="text-gray-600">Setting up your experience...</p>
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   // Show loading while checking user status
