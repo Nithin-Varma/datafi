@@ -4,7 +4,9 @@ import { usePoolDetails } from "@/lib/hooks/usePools";
 import { useJoinPool } from "@/lib/hooks/usePoolActions";
 import { useUser } from "@/lib/hooks/useUser";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { PoolDetailsModal } from "@/components/pool-details-modal";
+import { VerificationModal } from "@/components/verification-modal";
 
 interface PoolCardProps {
   poolAddress: string;
@@ -18,10 +20,18 @@ export function PoolCard({ poolAddress, onJoin, onBuy, onViewDetails }: PoolCard
   const { userContract } = useUser();
   const { joinPool, isLoading: isJoining, isSuccess: joinedSuccessfully } = useJoinPool();
   const [isJoiningPool, setIsJoiningPool] = useState(false);
+  const [modalType, setModalType] = useState<'none' | 'details' | 'verification'>('none');
+  const [isModalLoading, setIsModalLoading] = useState(false);
+  const [justJoined, setJustJoined] = useState(false);
 
+  // Ensure only one modal is open at a time
+  useEffect(() => {
+    // This is now handled by the single modalType state
+  }, [modalType]);
 
-  // Show success message when joined
-  if (joinedSuccessfully) {
+  // Show success message when joined and update local state
+  if (joinedSuccessfully && !justJoined) {
+    setJustJoined(true);
     setTimeout(() => {
       alert("Successfully joined the pool! You can now submit data.");
     }, 1000);
@@ -60,6 +70,34 @@ export function PoolCard({ poolAddress, onJoin, onBuy, onViewDetails }: PoolCard
 
   const isPoolExpired = (deadline: bigint) => {
     return Date.now() / 1000 > Number(deadline);
+  };
+
+  // Determine user role
+  const isCreator = poolInfo?.creator?.toLowerCase() === userContract?.toLowerCase();
+  const isSeller = poolInfo?.sellers?.includes(userContract || "") || justJoined;
+
+  const handleViewDetails = () => {
+    if (isModalLoading) return; // Prevent rapid clicking
+    
+    // Close any open modals first
+    setModalType('none');
+    
+    // Use requestAnimationFrame for smoother transitions
+    requestAnimationFrame(() => {
+      if (isCreator) {
+        setModalType('details');
+      } else if (isSeller) {
+        setModalType('verification');
+      } else {
+        // Regular user - show basic details
+        setModalType('details');
+      }
+    });
+  };
+
+  // Close modals with proper state management
+  const closeModal = () => {
+    setModalType('none');
   };
 
   return (
@@ -115,29 +153,41 @@ export function PoolCard({ poolAddress, onJoin, onBuy, onViewDetails }: PoolCard
       </div>
 
       <div className="mt-auto">
-        <div className="flex items-center justify-between mb-4">
-          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-            poolInfo.isActive && !isPoolExpired(poolInfo.deadline)
-              ? "bg-green-100 text-green-800 border border-green-200"
-              : "bg-red-100 text-red-800 border border-red-200"
-          }`}>
-            {poolInfo.isActive && !isPoolExpired(poolInfo.deadline) ? "🟢 Active" : "🔴 Inactive"}
-          </span>
-          
-          {isPoolExpired(poolInfo.deadline) && (
-            <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
-              ⏰ Expired
-            </span>
-          )}
-        </div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                poolInfo.isActive && !isPoolExpired(poolInfo.deadline)
+                  ? "bg-green-100 text-green-800 border border-green-200"
+                  : "bg-red-100 text-red-800 border border-red-200"
+              }`}>
+                {poolInfo.isActive && !isPoolExpired(poolInfo.deadline) ? "🟢 Active" : "🔴 Inactive"}
+              </span>
+              
+              {(isSeller || justJoined) && (
+                <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                  ✅ You're a Seller
+                </span>
+              )}
+              
+              {isCreator && (
+                <span className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                  👑 Pool Creator
+                </span>
+              )}
+            </div>
+            
+            {isPoolExpired(poolInfo.deadline) && (
+              <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
+                ⏰ Expired
+              </span>
+            )}
+          </div>
         
         <div className="flex space-x-2">
-          <Button
-            onClick={async () => {
-              if (verifiedSellersCount > 0 && onBuy) {
-                onBuy(poolAddress);
-              } else {
-                // Join pool functionality
+          {/* Show join button only if user is NOT creator and NOT already a seller */}
+          {!isCreator && !isSeller && !justJoined && (
+            <Button
+              onClick={async () => {
                 if (userContract) {
                   setIsJoiningPool(true);
                   try {
@@ -154,31 +204,64 @@ export function PoolCard({ poolAddress, onJoin, onBuy, onViewDetails }: PoolCard
                 } else {
                   alert("Please create a user account first.");
                 }
-              }
-            }}
-            disabled={!poolInfo.isActive || isPoolExpired(poolInfo.deadline) || isJoiningPool || isJoining}
-            className="flex-1 bg-gradient-to-r from-blue-600 to-blue-800 text-white font-semibold px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 text-sm"
-          >
-            {isJoiningPool || isJoining ? (
-              <div className="flex items-center space-x-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white"></div>
-                <span>Joining...</span>
-              </div>
-            ) : verifiedSellersCount > 0 ? (
-              "💰 Buy"
-            ) : (
-              "🚀 Join as Seller"
-            )}
-          </Button>
+              }}
+              disabled={!poolInfo.isActive || isPoolExpired(poolInfo.deadline) || isJoiningPool || isJoining}
+              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-800 text-white font-semibold px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 text-sm"
+            >
+              {isJoiningPool || isJoining ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white"></div>
+                  <span>Joining...</span>
+                </div>
+              ) : (
+                "🚀 Join as Seller"
+              )}
+            </Button>
+          )}
+          
+          {/* Show buy button only for non-sellers when there are verified sellers */}
+          {!isCreator && !isSeller && !justJoined && verifiedSellersCount > 0 && (
+            <Button
+              onClick={() => onBuy?.(poolAddress)}
+              className="flex-1 bg-gradient-to-r from-green-600 to-green-800 text-white font-semibold px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-300 hover:scale-105 text-sm"
+            >
+              💰 Buy Data
+            </Button>
+          )}
           
           <Button
-            onClick={() => onViewDetails?.(poolAddress)}
-            className="bg-gray-50 text-gray-700 font-semibold px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-100 transition-all duration-300 text-sm"
+            onClick={handleViewDetails}
+            disabled={isModalLoading}
+            className={`${isCreator || isSeller || justJoined ? 'w-full' : ''} bg-gray-50 text-gray-700 font-semibold px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-100 transition-all duration-300 text-sm disabled:opacity-50`}
           >
-            👁️
+            {isModalLoading ? (
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-gray-600"></div>
+                <span>Loading...</span>
+              </div>
+            ) : (
+              isCreator ? "👥 Manage" : (isSeller || justJoined) ? "✅ Verify" : "👁️ View"
+            )}
           </Button>
         </div>
       </div>
+
+      {/* Modals */}
+      {modalType === 'details' && (
+        <PoolDetailsModal
+          poolAddress={poolAddress}
+          isOpen={true}
+          onClose={closeModal}
+        />
+      )}
+      
+      {modalType === 'verification' && (
+        <VerificationModal
+          poolAddress={poolAddress}
+          isOpen={true}
+          onClose={closeModal}
+        />
+      )}
     </div>
   );
 }

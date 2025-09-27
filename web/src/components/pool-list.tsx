@@ -111,15 +111,12 @@ export function PoolList() {
                   poolAddress={poolAddress}
                   onJoin={(address) => {
                     console.log("Successfully joined pool:", address);
-                    // You could add a toast notification here
                   }}
                   onBuy={(address) => {
                     console.log("Buy data from pool:", address);
-                    // Implement purchase functionality here
                   }}
                   onViewDetails={(address) => {
                     console.log("View pool details:", address);
-                    // Implement view details functionality here
                   }}
                 />
               ))}

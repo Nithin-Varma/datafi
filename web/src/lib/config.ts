@@ -1,7 +1,7 @@
 // Contract addresses - Update these with your deployed contract addresses
 export const CONTRACT_ADDRESSES = {
-  USER_FACTORY: "0x2c80D5845BC9Cee02Bf3eA82cD1A0Ec1e5FF3dbd",
-  POOL_FACTORY: "0x04B9aea3a6Df96B36756ef23FaFd7123F788770d",
+  USER_FACTORY: "0x029ea9909A528106CD3796107e0700A48a5aFd93",
+  POOL_FACTORY: "0xEF364ee4D477E0Dbff90DEB744eD8C4603B8D5F6",
 } as const;
 
 // WalletConnect Project ID - Get from https://cloud.walletconnect.com/
@@ -228,6 +228,23 @@ export const POOL_ABI = [
     "name": "purchaseData",
     "outputs": [],
     "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"name": "_seller", "type": "address"},
+      {"name": "_verified", "type": "bool"}
+    ],
+    "name": "verifySeller",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "_encryptedData", "type": "string"}],
+    "name": "submitData",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   }
 ] as const;
