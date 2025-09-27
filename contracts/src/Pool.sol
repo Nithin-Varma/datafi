@@ -104,12 +104,22 @@ contract Pool {
         emit SellerJoined(msg.sender);
     }
 
+    function joinPoolBySender(address _sender) external {
+        if (_sender == poolInfo.creator) revert CreatorCannotJoin();
+        if (!poolInfo.isActive) revert PoolNotActive();
+        if (block.timestamp > poolInfo.deadline) revert DeadlinePassed();
+        if (userJoined[_sender]) revert UserAlreadyJoined();
+        userJoined[_sender] = true;
+        joinedSellers.push(_sender);
+        emit SellerJoined(_sender);
+    }
+
     function submitProof(string memory _proofName, bytes32 _proofHash) external {
         if (!poolInfo.isActive) revert PoolNotActive();
         if (block.timestamp > poolInfo.deadline) revert DeadlinePassed();
         if (!userJoined[msg.sender]) revert UserNotJoined();
         if (userFullyVerified[msg.sender]) revert AlreadyFullyVerified();
-        
+
         // Check if this proof is required for the pool
         bool isRequiredProof = false;
         ProofType proofType;
@@ -122,20 +132,54 @@ contract Pool {
         }
         if (!isRequiredProof) revert ProofNotRequired();
         if (userProofs[msg.sender][_proofName]) revert ProofAlreadySubmitted();
-        
+
         // Generate unique proof hash combining user address, proof name, and proof hash
         bytes32 uniqueProofHash = keccak256(abi.encodePacked(msg.sender, _proofName, _proofHash, address(this)));
         if (globalProofHashes[uniqueProofHash]) revert ProofAlreadyUsed();
-        
+
         userProofs[msg.sender][_proofName] = true;
         userProofHashes[msg.sender][_proofName] = uniqueProofHash;
         globalProofHashes[uniqueProofHash] = true;
         proofVerified[_proofHash] = true;
-        
+
         emit ProofSubmitted(msg.sender, _proofName, true);
-        
+
         // Check if user has all required proofs
         _checkFullVerification(msg.sender);
+    }
+
+    function submitProofBySender(address _sender, string memory _proofName, bytes32 _proofHash) external {
+        if (!poolInfo.isActive) revert PoolNotActive();
+        if (block.timestamp > poolInfo.deadline) revert DeadlinePassed();
+        if (!userJoined[_sender]) revert UserNotJoined();
+        if (userFullyVerified[_sender]) revert AlreadyFullyVerified();
+
+        // Check if this proof is required for the pool
+        bool isRequiredProof = false;
+        ProofType proofType;
+        for (uint256 i = 0; i < poolInfo.proofRequirements.length; i++) {
+            if (keccak256(bytes(poolInfo.proofRequirements[i].name)) == keccak256(bytes(_proofName))) {
+                isRequiredProof = true;
+                proofType = poolInfo.proofRequirements[i].proofType;
+                break;
+            }
+        }
+        if (!isRequiredProof) revert ProofNotRequired();
+        if (userProofs[_sender][_proofName]) revert ProofAlreadySubmitted();
+
+        // Generate unique proof hash combining user address, proof name, and proof hash
+        bytes32 uniqueProofHash = keccak256(abi.encodePacked(_sender, _proofName, _proofHash, address(this)));
+        if (globalProofHashes[uniqueProofHash]) revert ProofAlreadyUsed();
+
+        userProofs[_sender][_proofName] = true;
+        userProofHashes[_sender][_proofName] = uniqueProofHash;
+        globalProofHashes[uniqueProofHash] = true;
+        proofVerified[_proofHash] = true;
+
+        emit ProofSubmitted(_sender, _proofName, true);
+
+        // Check if user has all required proofs
+        _checkFullVerification(_sender);
     }
 
     function submitSelfProof(string memory _proofName, bytes32 _selfProofHash) external {
@@ -143,7 +187,7 @@ contract Pool {
         if (block.timestamp > poolInfo.deadline) revert DeadlinePassed();
         if (!userJoined[msg.sender]) revert UserNotJoined();
         if (userFullyVerified[msg.sender]) revert AlreadyFullyVerified();
-        
+
         // Check if this is a Self proof type
         bool isSelfProofType = false;
         for (uint256 i = 0; i < poolInfo.proofRequirements.length; i++) {
@@ -157,19 +201,53 @@ contract Pool {
         }
         if (!isSelfProofType) revert NotSelfProof();
         if (userProofs[msg.sender][_proofName]) revert ProofAlreadySubmitted();
-        
+
         // Generate unique proof hash for Self proofs
         bytes32 uniqueProofHash = keccak256(abi.encodePacked(msg.sender, _proofName, _selfProofHash, address(this)));
         if (globalProofHashes[uniqueProofHash]) revert ProofAlreadyUsed();
-        
+
         userProofs[msg.sender][_proofName] = true;
         userProofHashes[msg.sender][_proofName] = uniqueProofHash;
         globalProofHashes[uniqueProofHash] = true;
-        
+
         emit ProofSubmitted(msg.sender, _proofName, true);
-        
+
         // Check if user has all required proofs
         _checkFullVerification(msg.sender);
+    }
+
+    function submitSelfProofBySender(address _sender, string memory _proofName, bytes32 _selfProofHash) external {
+        if (!poolInfo.isActive) revert PoolNotActive();
+        if (block.timestamp > poolInfo.deadline) revert DeadlinePassed();
+        if (!userJoined[_sender]) revert UserNotJoined();
+        if (userFullyVerified[_sender]) revert AlreadyFullyVerified();
+
+        // Check if this is a Self proof type
+        bool isSelfProofType = false;
+        for (uint256 i = 0; i < poolInfo.proofRequirements.length; i++) {
+            if (keccak256(bytes(poolInfo.proofRequirements[i].name)) == keccak256(bytes(_proofName))) {
+                ProofType proofType = poolInfo.proofRequirements[i].proofType;
+                if (proofType == ProofType.SELF_AGE_VERIFICATION || proofType == ProofType.SELF_NATIONALITY) {
+                    isSelfProofType = true;
+                    break;
+                }
+            }
+        }
+        if (!isSelfProofType) revert NotSelfProof();
+        if (userProofs[_sender][_proofName]) revert ProofAlreadySubmitted();
+
+        // Generate unique proof hash for Self proofs
+        bytes32 uniqueProofHash = keccak256(abi.encodePacked(_sender, _proofName, _selfProofHash, address(this)));
+        if (globalProofHashes[uniqueProofHash]) revert ProofAlreadyUsed();
+
+        userProofs[_sender][_proofName] = true;
+        userProofHashes[_sender][_proofName] = uniqueProofHash;
+        globalProofHashes[uniqueProofHash] = true;
+
+        emit ProofSubmitted(_sender, _proofName, true);
+
+        // Check if user has all required proofs
+        _checkFullVerification(_sender);
     }
 
     function verifySeller(address _seller, bool _verified, bytes32 _proof) external {

@@ -55,7 +55,7 @@ contract PoolFactory {
 
     function joinPool(address _poolAddress) external {
         Pool pool = Pool(payable(_poolAddress));
-        pool.joinPool();
+        pool.joinPoolBySender(msg.sender);
     }
 
     function verifySeller(address _poolAddress, address _seller, bool _verified, bytes32 _proof) external {
@@ -65,12 +65,12 @@ contract PoolFactory {
 
     function submitProof(address _poolAddress, string memory _proofName, bytes32 _proofHash) external {
         Pool pool = Pool(payable(_poolAddress));
-        pool.submitProof(_proofName, _proofHash);
+        pool.submitProofBySender(msg.sender, _proofName, _proofHash);
     }
 
     function submitSelfProof(address _poolAddress, string memory _proofName, bytes32 _selfProofHash) external {
         Pool pool = Pool(payable(_poolAddress));
-        pool.submitSelfProof(_proofName, _selfProofHash);
+        pool.submitSelfProofBySender(msg.sender, _proofName, _selfProofHash);
     }
 
     function getAllPools() external view returns (address[] memory) {

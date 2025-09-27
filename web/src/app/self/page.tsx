@@ -3,10 +3,10 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
-  SelfQRcodeWrapper,
+  SelfQRcode as SelfQRcodeWrapper,
   SelfAppBuilder,
   type SelfApp,
-  countries, 
+  countries,
   getUniversalLink,
 } from "@selfxyz/qrcode";
 import { useAccount } from "wagmi";

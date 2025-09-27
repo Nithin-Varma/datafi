@@ -1,7 +1,7 @@
 // Contract addresses for Base Sepolia - Update these with your deployed contract addresses
 export const CONTRACT_ADDRESSES = {
-  USER_FACTORY: "0x26B0A220B6de85551f03f3FD846b51F7DE0512f7", // Update with your Base Sepolia address
-  POOL_FACTORY: "0x28657e1A4D6d691eb36572dc78658031f37A6aF1", // Update with your Base Sepolia address
+  USER_FACTORY: "0x91fCfa6A5AC782e0dFdF8Cf2b32CC2c5d6f0Fd7f", // Update with your Base Sepolia address
+  POOL_FACTORY: "0xD918C3c00f5B919f33bEF07a4048AB0D61feDC0d", // Update with your Base Sepolia address
 } as const;
 
 // WalletConnect Project ID - Get from https://cloud.walletconnect.com/
@@ -77,6 +77,40 @@ export const POOL_FACTORY_ABI = [
   {
     "inputs": [{"name": "_poolAddress", "type": "address"}],
     "name": "joinPool",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"name": "_poolAddress", "type": "address"},
+      {"name": "_proofName", "type": "string"},
+      {"name": "_proofHash", "type": "bytes32"}
+    ],
+    "name": "submitProof",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"name": "_poolAddress", "type": "address"},
+      {"name": "_proofName", "type": "string"},
+      {"name": "_selfProofHash", "type": "bytes32"}
+    ],
+    "name": "submitSelfProof",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"name": "_poolAddress", "type": "address"},
+      {"name": "_seller", "type": "address"},
+      {"name": "_verified", "type": "bool"},
+      {"name": "_proof", "type": "bytes32"}
+    ],
+    "name": "verifySeller",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -265,6 +299,13 @@ export const POOL_ABI = [
     "type": "function"
   },
   {
+    "inputs": [{"name": "_sender", "type": "address"}],
+    "name": "joinPoolBySender",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "purchaseData",
     "outputs": [],
@@ -300,10 +341,32 @@ export const POOL_ABI = [
   },
   {
     "inputs": [
+      {"name": "_sender", "type": "address"},
+      {"name": "_proofName", "type": "string"},
+      {"name": "_proofHash", "type": "bytes32"}
+    ],
+    "name": "submitProofBySender",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
       {"name": "_proofName", "type": "string"},
       {"name": "_selfProofHash", "type": "bytes32"}
     ],
     "name": "submitSelfProof",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"name": "_sender", "type": "address"},
+      {"name": "_proofName", "type": "string"},
+      {"name": "_selfProofHash", "type": "bytes32"}
+    ],
+    "name": "submitSelfProofBySender",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
