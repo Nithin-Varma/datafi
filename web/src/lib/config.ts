@@ -1,7 +1,7 @@
 // Contract addresses for Base Sepolia - Update these with your deployed contract addresses
 export const CONTRACT_ADDRESSES = {
-  USER_FACTORY: "0xd14DE1847bc0Ae20C54EaeE6420b34f91eBDEA73", // Update with your Base Sepolia address
-  POOL_FACTORY: "0xBa5E825Cc0327c6943E8328bC80278B6910b2c02", // Update with your Base Sepolia address
+  USER_FACTORY: "0x26B0A220B6de85551f03f3FD846b51F7DE0512f7", // Update with your Base Sepolia address
+  POOL_FACTORY: "0x28657e1A4D6d691eb36572dc78658031f37A6aF1", // Update with your Base Sepolia address
 } as const;
 
 // WalletConnect Project ID - Get from https://cloud.walletconnect.com/
