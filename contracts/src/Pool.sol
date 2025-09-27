@@ -291,5 +291,15 @@ contract Pool {
         return false;
     }
 
+    // Helper functions to check user status
+    function hasUserJoined(address _user) external view returns (bool) {
+        return userJoined[_user];
+    }
+
+
+    function getUserProofStatus(address _user, string memory _proofName) external view returns (bool) {
+        return userProofs[_user][_proofName];
+    }
+
     receive() external payable {}
 }

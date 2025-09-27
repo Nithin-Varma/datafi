@@ -3,6 +3,7 @@
 import { usePoolDetails } from "@/lib/hooks/usePools";
 import { useJoinPool } from "@/lib/hooks/usePoolActions";
 import { useUser } from "@/lib/hooks/useUser";
+import { useUserPoolStatus } from "@/lib/hooks/useUserPoolStatus";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -17,24 +18,80 @@ interface PoolCardProps {
 
 export function PoolCard({ poolAddress, onJoin, onBuy, onViewDetails }: PoolCardProps) {
   const { poolInfo, verifiedSellersCount, totalSellers, sellers, isLoading, error } = usePoolDetails(poolAddress);
-  const { userContract } = useUser();
+  const { userContract, address: userEOA } = useUser();
   const { joinPool, isLoading: isJoining, isSuccess: joinedSuccessfully } = useJoinPool();
+  const { hasJoined, isFullyVerified, isLoading: statusLoading } = useUserPoolStatus(poolAddress, userContract);
   const [isJoiningPool, setIsJoiningPool] = useState(false);
   const [justJoined, setJustJoined] = useState(false);
-  const [hasJoined, setHasJoined] = useState(false);
   const router = useRouter();
 
   // Show success message when joined and update local state
   useEffect(() => {
     if (joinedSuccessfully && !justJoined) {
       setJustJoined(true);
-      setHasJoined(true);
       setTimeout(() => {
         alert("Successfully joined the pool! You can now submit data.");
       }, 1000);
     }
   }, [joinedSuccessfully, justJoined]);
 
+  const formatEther = (wei: bigint) => {
+    return Number(wei) / 1e18;
+  };
+
+  const formatDate = (timestamp: bigint) => {
+    return new Date(Number(timestamp) * 1000).toLocaleDateString();
+  };
+
+  const isPoolExpired = (deadline: bigint) => {
+    return Date.now() / 1000 > Number(deadline);
+  };
+
+  // Determine user role - compare with both user contract and EOA address
+  const isCreator = poolInfo?.creator?.toLowerCase() === userContract?.toLowerCase() || 
+                    poolInfo?.creator?.toLowerCase() === userEOA?.toLowerCase();
+  const isSeller = hasJoined; // Use contract state instead of local state
+  
+  // Debug logging (commented out for production)
+  // console.log("Pool Card Debug:", {
+  //   poolAddress,
+  //   userContract,
+  //   userEOA,
+  //   creator: poolInfo?.creator,
+  //   isCreator,
+  //   isSeller,
+  //   sellers,
+  //   hasJoined
+  // });
+
+  const handleJoinPool = async () => {
+    if (!userContract) {
+      alert("Please connect your wallet first");
+      return;
+    }
+    
+    // Double-check creator status
+    if (isCreator) {
+      alert("You cannot join your own pool!");
+      return;
+    }
+    
+    setIsJoiningPool(true);
+    try {
+      await joinPool(userContract, poolAddress);
+    } catch (error) {
+      console.error("Error joining pool:", error);
+      alert("Failed to join pool. Please try again.");
+    } finally {
+      setIsJoiningPool(false);
+    }
+  };
+
+  const handleViewDetails = () => {
+    router.push(`/pools/${poolAddress}`);
+  };
+
+  // Early returns after all hooks
   if (isLoading) {
     return (
       <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
@@ -57,43 +114,6 @@ export function PoolCard({ poolAddress, onJoin, onBuy, onViewDetails }: PoolCard
       </div>
     );
   }
-
-  const formatEther = (wei: bigint) => {
-    return Number(wei) / 1e18;
-  };
-
-  const formatDate = (timestamp: bigint) => {
-    return new Date(Number(timestamp) * 1000).toLocaleDateString();
-  };
-
-  const isPoolExpired = (deadline: bigint) => {
-    return Date.now() / 1000 > Number(deadline);
-  };
-
-  // Determine user role
-  const isCreator = poolInfo?.creator?.toLowerCase() === userContract?.toLowerCase();
-  const isSeller = sellers?.includes(userContract || "") || hasJoined;
-
-  const handleJoinPool = async () => {
-    if (!userContract) {
-      alert("Please connect your wallet first");
-      return;
-    }
-    
-    setIsJoiningPool(true);
-    try {
-      await joinPool(userContract, poolAddress);
-    } catch (error) {
-      console.error("Error joining pool:", error);
-      alert("Failed to join pool. Please try again.");
-    } finally {
-      setIsJoiningPool(false);
-    }
-  };
-
-  const handleViewDetails = () => {
-    router.push(`/pools/${poolAddress}`);
-  };
 
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
@@ -166,6 +186,14 @@ export function PoolCard({ poolAddress, onJoin, onBuy, onViewDetails }: PoolCard
           View Details
         </Button>
         
+        {/* Creator Actions */}
+        {isCreator && (
+          <div className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors duration-200 text-center cursor-default">
+            👑 Your Pool
+          </div>
+        )}
+        
+        {/* Join Pool for non-creators */}
         {!isCreator && !isSeller && (
           <Button
             onClick={handleJoinPool}
@@ -183,6 +211,7 @@ export function PoolCard({ poolAddress, onJoin, onBuy, onViewDetails }: PoolCard
           </Button>
         )}
 
+        {/* Seller Actions */}
         {isSeller && !isCreator && (
           <Link
             href={`/pools/${poolAddress}/verify`}

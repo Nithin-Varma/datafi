@@ -7,6 +7,7 @@ import { useUser } from "@/lib/hooks/useUser";
 import { usePoolDetails } from "@/lib/hooks/usePools";
 import { useJoinPool, useVerifySeller } from "@/lib/hooks/usePoolActions";
 import { useVerifySeller as useVerifySellerHook } from "@/lib/hooks/useVerification";
+import { useUserPoolStatus } from "@/lib/hooks/useUserPoolStatus";
 import Link from "next/link";
 
 export default function PoolDetailPage() {
@@ -14,50 +15,24 @@ export default function PoolDetailPage() {
   const router = useRouter();
   const poolAddress = params.address as string;
   
-  const { userContract } = useUser();
+  const { userContract, address: userEOA } = useUser();
   const { poolInfo, sellers, verifiedSellersCount, totalSellers, isLoading, error } = usePoolDetails(poolAddress);
   const { joinPool, isLoading: isJoining, isSuccess: joinedSuccessfully } = useJoinPool();
   const { verifySeller, isLoading: isVerifying } = useVerifySellerHook();
+  const { hasJoined, isFullyVerified, isLoading: statusLoading } = useUserPoolStatus(poolAddress, userContract);
   const [verifyingSeller, setVerifyingSeller] = useState<string | null>(null);
   const [justJoined, setJustJoined] = useState(false);
-  const [hasJoined, setHasJoined] = useState(false);
 
   // Show success message when joined
   useEffect(() => {
     if (joinedSuccessfully && !justJoined) {
       setJustJoined(true);
-      setHasJoined(true);
       setTimeout(() => {
         alert("Successfully joined the pool! You can now submit data.");
       }, 1000);
     }
   }, [joinedSuccessfully, justJoined]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-600 mx-auto mb-4"></div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">Loading Pool Details</h3>
-          <p className="text-gray-600">Fetching pool information...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !poolInfo) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Pool Not Found</h1>
-          <p className="text-gray-600 mb-6">The requested pool could not be found.</p>
-          <Link href="/pools" className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-            Back to Pools
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   const formatEther = (wei: bigint) => {
     return Number(wei) / 1e18;
@@ -71,12 +46,32 @@ export default function PoolDetailPage() {
     return Date.now() / 1000 > Number(deadline);
   };
 
-  const isCreator = poolInfo?.creator?.toLowerCase() === userContract?.toLowerCase();
-  const isSeller = sellers?.includes(userContract || "") || hasJoined;
+  // Determine user role - compare with both user contract and EOA address
+  const isCreator = poolInfo?.creator?.toLowerCase() === userContract?.toLowerCase() || 
+                    poolInfo?.creator?.toLowerCase() === userEOA?.toLowerCase();
+  const isSeller = hasJoined; // Use contract state instead of local state
+  
+  // Debug logging (commented out for production)
+  // console.log("Pool Details Debug:", {
+  //   poolAddress,
+  //   userContract,
+  //   userEOA,
+  //   creator: poolInfo?.creator,
+  //   isCreator,
+  //   isSeller,
+  //   sellers,
+  //   hasJoined
+  // });
 
   const handleJoinPool = async () => {
     if (!userContract) {
       alert("Please connect your wallet first");
+      return;
+    }
+    
+    // Double-check creator status
+    if (isCreator) {
+      alert("You cannot join your own pool!");
       return;
     }
     
@@ -102,6 +97,33 @@ export default function PoolDetailPage() {
       setVerifyingSeller(null);
     }
   };
+
+  // Early returns after all hooks
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-600 mx-auto mb-4"></div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Loading Pool Details</h3>
+          <p className="text-gray-600">Fetching pool information...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !poolInfo) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Pool Not Found</h1>
+          <p className="text-gray-600 mb-6">The requested pool could not be found.</p>
+          <Link href="/pools" className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            Back to Pools
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -321,7 +343,10 @@ export default function PoolDetailPage() {
               )}
 
               {isCreator && (
-                <div className="space-y-3">
+                <div className="space-y-4">
+                  <div className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg font-semibold text-center cursor-default">
+                    👑 Your Pool
+                  </div>
                   <div className="text-sm text-gray-600">
                     As the creator, you can verify sellers and manage the pool.
                   </div>

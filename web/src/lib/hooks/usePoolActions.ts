@@ -61,7 +61,7 @@ export function useJoinPool() {
         address: userContractAddress as `0x${string}`,
         abi: USER_ABI,
         functionName: "joinPool",
-        args: [poolAddress],
+        args: [poolAddress as `0x${string}`],
         value: 0n,
       });
     } catch (err) {
@@ -92,7 +92,7 @@ export function useSubmitData() {
         abi: POOL_ABI,
         functionName: "submitData",
         args: [encryptedData],
-        value: 0n,
+        value: BigInt(0),
       });
     } catch (err) {
       console.error("Error submitting data:", err);
@@ -151,7 +151,7 @@ export function useVerifySeller() {
         address: poolAddress as `0x${string}`,
         abi: POOL_ABI,
         functionName: "verifySeller",
-        args: [sellerAddress, verified],
+        args: [sellerAddress as `0x${string}`, verified],
         value: 0n,
       });
     } catch (err) {
@@ -216,7 +216,7 @@ export function useSubmitProof() {
         address: userContractAddress as `0x${string}`,
         abi: USER_ABI,
         functionName: "submitProof",
-        args: [poolAddress, proofName, proofHash],
+        args: [poolAddress as `0x${string}`, proofName, proofHash as `0x${string}`],
       });
     } catch (err) {
       console.error("Error submitting proof:", err);
@@ -250,7 +250,7 @@ export function useSubmitSelfProof() {
         address: userContractAddress as `0x${string}`,
         abi: USER_ABI,
         functionName: "submitSelfProof",
-        args: [poolAddress, proofName, selfProofHash],
+        args: [poolAddress as `0x${string}`, proofName, selfProofHash as `0x${string}`],
       });
     } catch (err) {
       console.error("Error submitting Self proof:", err);

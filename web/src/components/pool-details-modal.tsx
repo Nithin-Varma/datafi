@@ -37,7 +37,7 @@ export function PoolDetailsModal({ poolAddress, isOpen, onClose }: PoolDetailsMo
   if (!isOpen) return null;
 
   const isCreator = poolInfo?.creator?.toLowerCase() === userContract?.toLowerCase();
-  const isSeller = sellers?.includes(userContract || "");
+  const isSeller = sellers?.includes(userContract as `0x${string}` || "");
 
   const formatEther = (wei: bigint) => {
     return Number(wei) / 1e18;
@@ -137,15 +137,15 @@ export function PoolDetailsModal({ poolAddress, isOpen, onClose }: PoolDetailsMo
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Price per Data:</span>
-                  <span className="font-semibold text-green-600">{formatEther(poolInfo?.pricePerData || 0n)} ETH</span>
+                  <span className="font-semibold text-green-600">{formatEther(poolInfo?.pricePerData as bigint)} ETH</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Total Budget:</span>
-                  <span className="font-semibold">{formatEther(poolInfo?.totalBudget || 0n)} ETH</span>
+                  <span className="font-semibold">{formatEther(poolInfo?.totalBudget as bigint)} ETH</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Remaining:</span>
-                  <span className="font-semibold text-blue-600">{formatEther(poolInfo?.remainingBudget || 0n)} ETH</span>
+                  <span className="font-semibold text-blue-600">{formatEther(poolInfo?.remainingBudget as bigint)} ETH</span>
                 </div>
               </div>
             </div>
@@ -161,20 +161,20 @@ export function PoolDetailsModal({ poolAddress, isOpen, onClose }: PoolDetailsMo
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Created:</span>
-                  <span className="font-semibold">{formatDate(poolInfo?.createdAt || 0n)}</span>
+                  <span className="font-semibold">{formatDate(poolInfo?.createdAt as bigint)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Deadline:</span>
-                  <span className="font-semibold">{formatDate(poolInfo?.deadline || 0n)}</span>
+                  <span className="font-semibold">{formatDate(poolInfo?.deadline as bigint)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Status:</span>
                   <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                    poolInfo?.isActive && !isPoolExpired(poolInfo?.deadline || 0n)
+                    poolInfo?.isActive && !isPoolExpired(poolInfo?.deadline)
                       ? "bg-green-100 text-green-800"
                       : "bg-red-100 text-red-800"
                   }`}>
-                    {poolInfo?.isActive && !isPoolExpired(poolInfo?.deadline || 0n) ? "Active" : "Inactive"}
+                    {poolInfo?.isActive && !isPoolExpired(poolInfo?.deadline) ? "Active" : "Inactive"}
                   </span>
                 </div>
               </div>
