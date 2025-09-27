@@ -1,6 +1,7 @@
 "use client";
 
 import { useUser } from "@/lib/hooks/useUser";
+import { useUserPoolCounts, useUserFinancialStats, useUserCreatedPoolsWithDetails, useUserJoinedPoolsWithDetails } from "@/lib/hooks/useUserPools";
 import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -8,17 +9,30 @@ import Link from "next/link";
 
 export default function Dashboard() {
   const { isConnected } = useAccount();
-  const { userProfile, totalEarnings, isLoading } = useUser();
+  const { isUserCreated, isLoading, userEOA, userContractAddress } = useUser();
   const router = useRouter();
 
-  // Redirect if not connected or no user
+  // Get user's pool counts and financial stats
+  const { createdCount, joinedCount, isLoading: countsLoading } = useUserPoolCounts(userContractAddress || "");
+  const { totalSpent, totalEarned, isLoading: financialLoading } = useUserFinancialStats(userContractAddress || "");
+  
+  // Get user's pools (simplified to avoid hooks rule violations)
+  const { createdPools, isLoading: createdPoolsLoading } = useUserCreatedPoolsWithDetails(userContractAddress || "");
+  const { joinedPools, isLoading: joinedPoolsLoading } = useUserJoinedPoolsWithDetails(userContractAddress || "");
+
+  const isLoadingData = isLoading || countsLoading || financialLoading || createdPoolsLoading || joinedPoolsLoading;
+
+  // Debug logging
+  console.log("Dashboard debug:", { isConnected, isUserCreated, isLoading });
+
+  // Redirect if not connected
   useEffect(() => {
     if (!isConnected) {
       router.push('/');
     }
   }, [isConnected, router]);
 
-  if (isLoading) {
+  if (isLoadingData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
@@ -30,7 +44,20 @@ export default function Dashboard() {
     );
   }
 
-  if (!userProfile) {
+  // Show loading while checking user status
+  if (isConnected && isUserCreated === undefined) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-600 mx-auto mb-4"></div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Checking User Status</h3>
+          <p className="text-gray-600">Verifying your account...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isUserCreated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
@@ -65,7 +92,7 @@ export default function Dashboard() {
             </Link>
             <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
               <span className="text-sm font-semibold text-gray-600">
-                {userProfile.name.charAt(0)}
+                U
               </span>
             </div>
           </div>
@@ -76,15 +103,15 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                Welcome back, {userProfile.name}!
+                Welcome back!
               </h2>
               <p className="text-gray-600 text-lg">
-                {userProfile.country} • {userProfile.age} years old
+                Your DataFi Dashboard
               </p>
             </div>
             <div className="text-right">
               <div className="text-3xl font-bold text-green-600 mb-1">
-                {totalEarnings ? `${Number(totalEarnings) / 1e18}` : "0"} ETH
+                {totalEarned ? `${Number(totalEarned) / 1e18}` : "0"} ETH
               </div>
               <div className="text-gray-600">Total Earnings</div>
             </div>
@@ -94,20 +121,20 @@ export default function Dashboard() {
         {/* Stats Grid */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-            <div className="text-2xl font-bold text-gray-900 mb-1">0</div>
+            <div className="text-2xl font-bold text-gray-900 mb-1">{createdCount}</div>
             <div className="text-gray-600">Pools Created</div>
           </div>
           <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-            <div className="text-2xl font-bold text-gray-900 mb-1">0</div>
+            <div className="text-2xl font-bold text-gray-900 mb-1">{joinedCount}</div>
             <div className="text-gray-600">Pools Joined</div>
           </div>
           <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-            <div className="text-2xl font-bold text-gray-900 mb-1">0</div>
-            <div className="text-gray-600">Data Sold</div>
+            <div className="text-2xl font-bold text-gray-900 mb-1">{Number(totalEarned) / 1e18}</div>
+            <div className="text-gray-600">ETH Earned</div>
           </div>
           <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-            <div className="text-2xl font-bold text-gray-900 mb-1">100%</div>
-            <div className="text-gray-600">Success Rate</div>
+            <div className="text-2xl font-bold text-gray-900 mb-1">{Number(totalSpent) / 1e18}</div>
+            <div className="text-gray-600">ETH Spent</div>
           </div>
         </div>
 
@@ -121,13 +148,25 @@ export default function Dashboard() {
                 View All
               </Link>
             </div>
-            <div className="text-center py-8">
-              <div className="text-4xl mb-4">📊</div>
-              <p className="text-gray-600 mb-4">You haven't created any pools yet</p>
-              <Link href="/pools" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                Create Pool
-              </Link>
-            </div>
+                {createdPools.length > 0 ? (
+                  <div className="space-y-3">
+                    {createdPools.map((pool, index) => (
+                      <div key={index} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                        <p className="text-sm font-mono text-gray-600">
+                          {pool.address.slice(0, 6)}...{pool.address.slice(-4)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="text-4xl mb-4">📊</div>
+                    <p className="text-gray-600 mb-4">You haven't created any pools yet</p>
+                    <Link href="/pools" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                      Create Pool
+                    </Link>
+                  </div>
+                )}
           </div>
 
           {/* Joined Pools */}
@@ -138,53 +177,108 @@ export default function Dashboard() {
                 Browse Pools
               </Link>
             </div>
-            <div className="text-center py-8">
-              <div className="text-4xl mb-4">🤝</div>
-              <p className="text-gray-600 mb-4">You haven't joined any pools yet</p>
-              <Link href="/pools" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                Browse Pools
-              </Link>
+                {joinedPools.length > 0 ? (
+                  <div className="space-y-3">
+                    {joinedPools.map((pool, index) => (
+                      <div key={index} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                        <p className="text-sm font-mono text-gray-600">
+                          {pool.address.slice(0, 6)}...{pool.address.slice(-4)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="text-4xl mb-4">🤝</div>
+                    <p className="text-gray-600 mb-4">You haven't joined any pools yet</p>
+                    <Link href="/pools" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                      Browse Pools
+                    </Link>
+                  </div>
+                )}
+          </div>
+        </div>
+
+        {/* Account Summary */}
+        <div className="bg-white rounded-2xl p-6 mt-8 border border-gray-100 shadow-sm">
+          <h3 className="text-xl font-semibold text-gray-900 mb-6">Account Summary</h3>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Total Earned</label>
+              <p className="text-gray-900 font-medium text-lg">
+                {Number(totalEarned) / 1e18} ETH
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Total Spent</label>
+              <p className="text-gray-900 font-medium text-lg">
+                {Number(totalSpent) / 1e18} ETH
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Net Profit</label>
+              <p className="text-gray-900 font-medium text-lg">
+                {(Number(totalEarned) - Number(totalSpent)) / 1e18} ETH
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Active Pools</label>
+              <p className="text-gray-900 font-medium text-lg">
+                {createdCount + joinedCount} pools
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Profile Section */}
+        {/* User Addresses */}
         <div className="bg-white rounded-2xl p-6 mt-8 border border-gray-100 shadow-sm">
-          <h3 className="text-xl font-semibold text-gray-900 mb-6">Profile Information</h3>
+          <h3 className="text-xl font-semibold text-gray-900 mb-6">Your Addresses</h3>
           <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
-              <p className="text-gray-900 font-medium">{userProfile.name}</p>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Wallet Address (EOA)</label>
+              <div className="bg-gray-50 p-3 rounded-lg border">
+                <p className="text-sm font-mono text-gray-900 break-all">
+                  {userEOA || "Not connected"}
+                </p>
+                {userEOA && (
+                  <button 
+                    onClick={() => navigator.clipboard.writeText(userEOA)}
+                    className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    📋 Copy Address
+                  </button>
+                )}
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-              <p className="text-gray-900 font-medium">{userProfile.email}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Age</label>
-              <p className="text-gray-900 font-medium">{userProfile.age} years</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
-              <p className="text-gray-900 font-medium">{userProfile.country}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Verification Status</label>
-              <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
-                userProfile.isVerified
-                  ? "bg-green-100 text-green-800"
-                  : "bg-yellow-100 text-yellow-800"
-              }`}>
-                {userProfile.isVerified ? "✅ Verified" : "⏳ Pending"}
-              </span>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Member Since</label>
-              <p className="text-gray-900 font-medium">
-                {new Date(Number(userProfile.createdAt) * 1000).toLocaleDateString()}
-              </p>
+              <label className="block text-sm font-medium text-gray-700 mb-2">User Contract Address</label>
+              <div className="bg-gray-50 p-3 rounded-lg border">
+                <p className="text-sm font-mono text-gray-900 break-all">
+                  {userContractAddress || "Not created"}
+                </p>
+                {userContractAddress && (
+                  <button 
+                    onClick={() => navigator.clipboard.writeText(userContractAddress)}
+                    className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    📋 Copy Address
+                  </button>
+                )}
+              </div>
             </div>
           </div>
+          
+          {userEOA && userContractAddress && (
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center space-x-2">
+                <span className="text-blue-600">ℹ️</span>
+                <p className="text-sm text-blue-800">
+                  <strong>Your User Contract:</strong> This is your personal smart contract that tracks your pools, earnings, and spending. 
+                  All your DataFi activities are managed through this contract.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 // Contract addresses - Update these with your deployed contract addresses
 export const CONTRACT_ADDRESSES = {
-  USER_FACTORY: "0x073D631FE0DfEE026215F4b2063574Ab9f9962Cf",
-  POOL_FACTORY: "0x7CE696069e7081A7C1D4a0a7e5050A336dFC545b",
+  USER_FACTORY: "0x441A639ef7F54B17d022767D4B1CF832EE17e00D",
+  POOL_FACTORY: "0x22e839A53E7e93fF6FE09b8F1634056ADa6B434a",
 } as const;
 
 // WalletConnect Project ID - Get from https://cloud.walletconnect.com/
@@ -9,15 +9,15 @@ export const WALLETCONNECT_PROJECT_ID = process.env.NEXT_PUBLIC_WALLETCONNECT_PR
 
 // Network configuration
 export const CHAIN_CONFIG = {
-  chainId: 11155111, // Sepolia testnet
+  chainId: 11155111,
   rpcUrl: process.env.NEXT_PUBLIC_RPC_URL || "https://sepolia.infura.io/v3/your_project_id",
 } as const;
 
-// Contract ABIs (simplified for demo)
+// Contract ABIs for new simplified contracts
 export const USER_FACTORY_ABI = [
   {
     "inputs": [{"name": "_wallet", "type": "address"}],
-    "name": "getUserContract",
+    "name": "getUser",
     "outputs": [{"name": "", "type": "address"}],
     "stateMutability": "view",
     "type": "function"
@@ -30,15 +30,24 @@ export const USER_FACTORY_ABI = [
     "type": "function"
   },
   {
-    "inputs": [
-      {"name": "_name", "type": "string"},
-      {"name": "_email", "type": "string"},
-      {"name": "_age", "type": "uint256"},
-      {"name": "_country", "type": "string"}
-    ],
+    "inputs": [],
     "name": "createUser",
-    "outputs": [{"name": "", "type": "address"}],
-    "stateMutability": "payable",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getAllUsers",
+    "outputs": [{"name": "", "type": "address[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getTotalUsers",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
     "type": "function"
   }
 ] as const;
@@ -55,7 +64,7 @@ export const POOL_FACTORY_ABI = [
     ],
     "name": "createPool",
     "outputs": [{"name": "", "type": "address"}],
-    "stateMutability": "payable",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -64,34 +73,97 @@ export const POOL_FACTORY_ABI = [
     "outputs": [{"name": "", "type": "address[]"}],
     "stateMutability": "view",
     "type": "function"
-  }
-] as const;
-
-export const USER_ABI = [
+  },
   {
-    "inputs": [],
-    "name": "getUserProfile",
-    "outputs": [
-      {
-        "components": [
-          {"name": "name", "type": "string"},
-          {"name": "email", "type": "string"},
-          {"name": "age", "type": "uint256"},
-          {"name": "country", "type": "string"},
-          {"name": "isVerified", "type": "bool"},
-          {"name": "createdAt", "type": "uint256"},
-          {"name": "lastActiveAt", "type": "uint256"}
-        ],
-        "name": "",
-        "type": "tuple"
-      }
-    ],
+    "inputs": [{"name": "_creator", "type": "address"}],
+    "name": "getCreatorPools",
+    "outputs": [{"name": "", "type": "address[]"}],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "totalEarnings",
+    "name": "getTotalPools",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getActivePools",
+    "outputs": [{"name": "", "type": "address[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "_dataType", "type": "string"}],
+    "name": "getPoolsByDataType",
+    "outputs": [{"name": "", "type": "address[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  }
+] as const;
+
+export const USER_ABI = [
+  {
+    "inputs": [
+      {"name": "_name", "type": "string"},
+      {"name": "_description", "type": "string"},
+      {"name": "_dataType", "type": "string"},
+      {"name": "_pricePerData", "type": "uint256"},
+      {"name": "_totalBudget", "type": "uint256"},
+      {"name": "_deadline", "type": "uint256"}
+    ],
+    "name": "createPool",
+    "outputs": [{"name": "", "type": "address"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "_poolAddress", "type": "address"}],
+    "name": "joinPool",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getCreatedPools",
+    "outputs": [{"name": "", "type": "address[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getJoinedPools",
+    "outputs": [{"name": "", "type": "address[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getCreatedPoolsCount",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getJoinedPoolsCount",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getTotalSpent",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getTotalEarned",
     "outputs": [{"name": "", "type": "uint256"}],
     "stateMutability": "view",
     "type": "function"
@@ -125,7 +197,7 @@ export const POOL_ABI = [
   },
   {
     "inputs": [],
-    "name": "getVerifiedSellersCount",
+    "name": "getSellersCount",
     "outputs": [{"name": "", "type": "uint256"}],
     "stateMutability": "view",
     "type": "function"
@@ -135,6 +207,20 @@ export const POOL_ABI = [
     "name": "getSellers",
     "outputs": [{"name": "", "type": "address[]"}],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "joinPool",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "purchaseData",
+    "outputs": [],
+    "stateMutability": "payable",
     "type": "function"
   }
 ] as const;

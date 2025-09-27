@@ -26,34 +26,52 @@ export function useUser() {
   const { data: userContractAddress } = useReadContract({
     address: CONTRACT_ADDRESSES.USER_FACTORY as `0x${string}`,
     abi: USER_FACTORY_ABI,
-    functionName: "getUserContract",
+    functionName: "getUser",
     args: address ? [address] : undefined,
     query: {
       enabled: isConnected && !!address && !!userExists,
     },
   });
 
-  // Get user profile
-  const { data: userProfile } = useReadContract({
+  // Get user stats
+  const { data: totalSpent } = useReadContract({
     address: userContractAddress as `0x${string}`,
     abi: USER_ABI,
-    functionName: "getUserProfile",
+    functionName: "getTotalSpent",
     query: {
       enabled: !!userContractAddress,
     },
   });
 
-  // Get total earnings
-  const { data: totalEarnings } = useReadContract({
+  const { data: totalEarned } = useReadContract({
     address: userContractAddress as `0x${string}`,
     abi: USER_ABI,
-    functionName: "totalEarnings",
+    functionName: "getTotalEarned",
+    query: {
+      enabled: !!userContractAddress,
+    },
+  });
+
+  const { data: createdPoolsCount } = useReadContract({
+    address: userContractAddress as `0x${string}`,
+    abi: USER_ABI,
+    functionName: "getCreatedPoolsCount",
+    query: {
+      enabled: !!userContractAddress,
+    },
+  });
+
+  const { data: joinedPoolsCount } = useReadContract({
+    address: userContractAddress as `0x${string}`,
+    abi: USER_ABI,
+    functionName: "getJoinedPoolsCount",
     query: {
       enabled: !!userContractAddress,
     },
   });
 
   useEffect(() => {
+    console.log("User hook debug:", { userExists, userContractAddress, address });
     if (userExists && userContractAddress) {
       setUserContract(userContractAddress);
       setIsUserCreated(true);
@@ -61,14 +79,25 @@ export function useUser() {
       setUserContract(null);
       setIsUserCreated(false);
     }
-  }, [userExists, userContractAddress]);
+  }, [userExists, userContractAddress, address]);
 
   const createUser = useWriteContract();
   const { isLoading: isCreatingUser, isSuccess: userCreated } = useWaitForTransactionReceipt({
-    hash: createUser.data?.hash,
+    hash: createUser.data,
   });
 
-  const createUserAccount = async (name: string, email: string, age: number, country: string) => {
+  // Refresh data when user is created
+  useEffect(() => {
+    if (userCreated) {
+      console.log("User created, refreshing data...");
+      // Add a small delay to prevent rapid re-renders
+      setTimeout(() => {
+        // The data will be refetched automatically by the hooks
+      }, 1000);
+    }
+  }, [userCreated]);
+
+  const createUserAccount = async () => {
     if (!address) return;
     
     setIsLoading(true);
@@ -77,8 +106,8 @@ export function useUser() {
         address: CONTRACT_ADDRESSES.USER_FACTORY as `0x${string}`,
         abi: USER_FACTORY_ABI,
         functionName: "createUser",
-        args: [name, email, age, country],
-        value: 0n, // No fee
+        args: [],
+        value: BigInt(0), // No fee
       });
     } catch (error) {
       console.error("Error creating user:", error);
@@ -93,9 +122,14 @@ export function useUser() {
     userContract,
     isUserCreated,
     isLoading: isLoading || isCreatingUser,
-    userProfile,
-    totalEarnings,
+    totalSpent,
+    totalEarned,
+    createdPoolsCount,
+    joinedPoolsCount,
     createUserAccount,
     userCreated,
+    // Add user addresses for display
+    userEOA: address,
+    userContractAddress: userContract,
   };
 }

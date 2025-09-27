@@ -7,10 +7,10 @@ import { PoolCreation } from "./pool-creation";
 import { PoolList } from "./pool-list";
 
 export function UserDashboard() {
-  const { userProfile, totalEarnings, address } = useUser();
+  const { totalSpent, totalEarned, createdPoolsCount, joinedPoolsCount, address } = useUser();
   const [activeTab, setActiveTab] = useState<"profile" | "create" | "pools">("profile");
 
-  if (!userProfile) {
+  if (!address) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
         <div className="text-center">
@@ -34,10 +34,10 @@ export function UserDashboard() {
               </div>
               <div>
                 <h1 className="text-4xl font-bold text-white mb-2">
-                  Welcome back, {userProfile.name}!
+                  Welcome back!
                 </h1>
                 <p className="text-white/70 text-lg">
-                  {userProfile.country} • {userProfile.age} years old
+                  Your DataFi Dashboard
                 </p>
               </div>
             </div>
@@ -45,21 +45,27 @@ export function UserDashboard() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="text-center">
                 <div className="text-3xl font-bold text-white mb-1">
-                  {totalEarnings ? `${Number(totalEarnings) / 1e18}` : "0"}
+                  {totalEarned ? `${Number(totalEarned) / 1e18}` : "0"}
                 </div>
                 <div className="text-white/70 text-sm">ETH Earned</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-white mb-1">0</div>
+                <div className="text-3xl font-bold text-white mb-1">
+                  {createdPoolsCount || "0"}
+                </div>
                 <div className="text-white/70 text-sm">Pools Created</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-white mb-1">0</div>
-                <div className="text-white/70 text-sm">Data Sold</div>
+                <div className="text-3xl font-bold text-white mb-1">
+                  {joinedPoolsCount || "0"}
+                </div>
+                <div className="text-white/70 text-sm">Pools Joined</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-white mb-1">100%</div>
-                <div className="text-white/70 text-sm">Success Rate</div>
+                <div className="text-3xl font-bold text-white mb-1">
+                  {totalSpent ? `${Number(totalSpent) / 1e18}` : "0"}
+                </div>
+                <div className="text-white/70 text-sm">ETH Spent</div>
               </div>
             </div>
           </div>
@@ -113,26 +119,27 @@ export function UserDashboard() {
               <div className="grid lg:grid-cols-2 gap-8">
                 <div className="space-y-6">
                   <div className="bg-white/5 backdrop-blur-sm p-6 rounded-2xl border border-white/10">
-                    <h3 className="text-xl font-semibold text-white mb-4">Personal Information</h3>
+                    <h3 className="text-xl font-semibold text-white mb-4">Account Information</h3>
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-white/70 mb-2">Name</label>
-                        <p className="text-lg text-white font-medium">{userProfile.name}</p>
+                        <label className="block text-sm font-medium text-white/70 mb-2">Wallet Address</label>
+                        <p className="text-sm text-white/60 font-mono bg-white/5 px-3 py-2 rounded-lg">
+                          {address}
+                        </p>
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-white/70 mb-2">Email</label>
-                        <p className="text-lg text-white font-medium">{userProfile.email}</p>
+                        <label className="block text-sm font-medium text-white/70 mb-2">Total Earned</label>
+                        <p className="text-lg text-white font-medium">
+                          {totalEarned ? `${Number(totalEarned) / 1e18} ETH` : "0 ETH"}
+                        </p>
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-white/70 mb-2">Age</label>
-                        <p className="text-lg text-white font-medium">{userProfile.age} years</p>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-white/70 mb-2">Country</label>
-                        <p className="text-lg text-white font-medium">{userProfile.country}</p>
+                        <label className="block text-sm font-medium text-white/70 mb-2">Total Spent</label>
+                        <p className="text-lg text-white font-medium">
+                          {totalSpent ? `${Number(totalSpent) / 1e18} ETH` : "0 ETH"}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -140,30 +147,29 @@ export function UserDashboard() {
                 
                 <div className="space-y-6">
                   <div className="bg-white/5 backdrop-blur-sm p-6 rounded-2xl border border-white/10">
-                    <h3 className="text-xl font-semibold text-white mb-4">Account Status</h3>
+                    <h3 className="text-xl font-semibold text-white mb-4">Pool Statistics</h3>
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-white/70 mb-2">Verification Status</label>
-                        <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
-                          userProfile.isVerified
-                            ? "bg-green-500/20 text-green-300 border border-green-500/30"
-                            : "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30"
-                        }`}>
-                          {userProfile.isVerified ? "✅ Verified" : "⏳ Pending Verification"}
-                        </span>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-white/70 mb-2">Member Since</label>
+                        <label className="block text-sm font-medium text-white/70 mb-2">Pools Created</label>
                         <p className="text-lg text-white font-medium">
-                          {new Date(Number(userProfile.createdAt) * 1000).toLocaleDateString()}
+                          {createdPoolsCount || "0"}
                         </p>
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-white/70 mb-2">Wallet Address</label>
-                        <p className="text-sm text-white/60 font-mono bg-white/5 px-3 py-2 rounded-lg">
-                          {address}
+                        <label className="block text-sm font-medium text-white/70 mb-2">Pools Joined</label>
+                        <p className="text-lg text-white font-medium">
+                          {joinedPoolsCount || "0"}
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-white/70 mb-2">Net Profit</label>
+                        <p className="text-lg text-white font-medium">
+                          {totalEarned && totalSpent 
+                            ? `${(Number(totalEarned) - Number(totalSpent)) / 1e18} ETH`
+                            : "0 ETH"
+                          }
                         </p>
                       </div>
                     </div>

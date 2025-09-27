@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { CONTRACT_ADDRESSES, POOL_FACTORY_ABI } from "@/lib/config";
+import { useCreatePool } from "@/lib/hooks/usePoolActions";
+import { useUser } from "@/lib/hooks/useUser";
 
 export function PoolCreation() {
   const [formData, setFormData] = useState({
@@ -15,15 +15,13 @@ export function PoolCreation() {
     deadline: "",
   });
 
-  const createPool = useWriteContract();
-  const { isLoading: isCreatingPool, isSuccess: poolCreated } = useWaitForTransactionReceipt({
-    hash: createPool.data?.hash,
-  });
+  const { userContract } = useUser();
+  const { createPool, isLoading: isCreatingPool, isSuccess: poolCreated } = useCreatePool();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.description || !formData.pricePerData || !formData.totalBudget) {
+    if (!formData.name || !formData.description || !formData.pricePerData || !formData.totalBudget || !userContract) {
       alert("Please fill in all required fields");
       return;
     }
@@ -31,20 +29,15 @@ export function PoolCreation() {
     const deadline = Math.floor(Date.now() / 1000) + (parseInt(formData.deadline) * 24 * 60 * 60); // Convert days to seconds
 
     try {
-      await createPool.writeContract({
-        address: CONTRACT_ADDRESSES.POOL_FACTORY as `0x${string}`,
-        abi: POOL_FACTORY_ABI,
-        functionName: "createPool",
-        args: [
-          formData.name,
-          formData.description,
-          formData.dataType,
-          BigInt(parseFloat(formData.pricePerData) * 1e18), // Convert to wei
-          BigInt(parseFloat(formData.totalBudget) * 1e18), // Convert to wei
-          BigInt(deadline)
-        ],
-        value: 0n, // No fee
-      });
+      await createPool(
+        userContract,
+        formData.name,
+        formData.description,
+        formData.dataType,
+        BigInt(parseFloat(formData.pricePerData) * 1e18), // Convert to wei
+        BigInt(parseFloat(formData.totalBudget) * 1e18), // Convert to wei
+        BigInt(deadline)
+      );
     } catch (error) {
       console.error("Error creating pool:", error);
     }
@@ -151,8 +144,6 @@ export function PoolCreation() {
               name="pricePerData"
               value={formData.pricePerData}
               onChange={handleChange}
-              step="0.001"
-              min="0"
               className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
               placeholder="0.01"
               required
@@ -169,8 +160,6 @@ export function PoolCreation() {
               name="totalBudget"
               value={formData.totalBudget}
               onChange={handleChange}
-              step="0.01"
-              min="0"
               className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
               placeholder="1.0"
               required

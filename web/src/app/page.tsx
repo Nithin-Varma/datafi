@@ -12,22 +12,29 @@ export default function Home() {
   const { isConnected } = useAccount();
   const { isUserCreated, isLoading, userCreated } = useUser();
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const router = useRouter();
+
+  // Initialize component
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitialized(true);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Auto-redirect after user creation
   useEffect(() => {
-    if (userCreated) {
+    if (userCreated && isInitialized) {
       setShowSuccess(true);
       setTimeout(() => {
         router.push('/dashboard');
       }, 2000);
     }
-  }, [userCreated, router]);
-
-  // Don't auto-redirect from home page - let user choose
+  }, [userCreated, router, isInitialized]);
 
   // Show loading state
-  if (isLoading) {
+  if (isLoading || !isInitialized) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
