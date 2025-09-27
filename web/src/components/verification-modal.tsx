@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import { useUser } from "@/lib/hooks/useUser";
 import { useSubmitSelfProof } from "@/lib/hooks/usePoolActions";
+import { useZkEmailVerification } from "@/lib/hooks/useZkEmailVerification";
+import { usePoolDetails } from "@/lib/hooks/usePools";
 import { Button } from "@/components/ui/button";
-import { X, CheckCircle, AlertCircle } from "lucide-react";
+import { X, CheckCircle, AlertCircle, Upload } from "lucide-react";
 
 interface ProofRequirement {
   name: string;
@@ -28,9 +30,13 @@ export default function VerificationModal({
 }: VerificationModalProps) {
   const { userContract } = useUser();
   const { submitSelfProof, isLoading: isSubmitting } = useSubmitSelfProof();
+  const { verifyAndStore, isLoading: isZkEmailLoading, error: zkEmailError } = useZkEmailVerification();
+  const { poolInfo } = usePoolDetails(poolAddress);
   const [currentStep, setCurrentStep] = useState(0);
   const [verificationResults, setVerificationResults] = useState<Record<string, boolean>>({});
   const [isVerifying, setIsVerifying] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [encryptedDataCid, setEncryptedDataCid] = useState<string>("");
 
   // Reset state when modal opens
   useEffect(() => {
@@ -38,6 +44,8 @@ export default function VerificationModal({
       setCurrentStep(0);
       setVerificationResults({});
       setIsVerifying(false);
+      setSelectedFile(null);
+      setEncryptedDataCid("");
     }
   }, [isOpen]);
 
@@ -47,24 +55,24 @@ export default function VerificationModal({
 
   const handleSelfVerification = async () => {
     if (!currentRequirement) return;
-    
+
     setIsVerifying(true);
-    
+
     try {
       // Simulate Self Protocol verification
       // In real implementation, this would redirect to Self Protocol
       const isSuccess = await simulateSelfVerification();
-      
+
       if (isSuccess) {
         setVerificationResults(prev => ({
           ...prev,
           [currentRequirement.name]: true
         }));
-        
+
         // Submit proof to contract
         const proofHash = generateRandomProofHash();
         await submitSelfProof(userContract!, poolAddress, currentRequirement.name, proofHash);
-        
+
         if (isLastStep) {
           // All verifications complete
           setTimeout(() => {
@@ -87,6 +95,65 @@ export default function VerificationModal({
       }));
     } finally {
       setIsVerifying(false);
+    }
+  };
+
+  const handleZkEmailVerification = async () => {
+    if (!currentRequirement || !selectedFile) return;
+
+    setIsVerifying(true);
+
+    try {
+      // Get pool creator address (buyer) from pool info
+      const buyerAddress = poolInfo?.creator;
+      if (!buyerAddress) {
+        throw new Error("Could not determine pool creator address");
+      }
+
+      const result = await verifyAndStore(selectedFile, buyerAddress, poolAddress);
+
+      if (result && result.isValid) {
+        setVerificationResults(prev => ({
+          ...prev,
+          [currentRequirement.name]: true
+        }));
+
+        setEncryptedDataCid(result.encryptedCid);
+
+        // Submit proof to contract
+        await submitSelfProof(userContract!, poolAddress, currentRequirement.name, result.proofHash);
+
+        if (isLastStep) {
+          // All verifications complete - trigger payment
+          setTimeout(() => {
+            onClose();
+          }, 2000);
+        } else {
+          setCurrentStep(prev => prev + 1);
+        }
+      } else {
+        setVerificationResults(prev => ({
+          ...prev,
+          [currentRequirement.name]: false
+        }));
+      }
+    } catch (error) {
+      console.error("ZK-Email verification failed:", error);
+      setVerificationResults(prev => ({
+        ...prev,
+        [currentRequirement.name]: false
+      }));
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.name.endsWith('.eml')) {
+      setSelectedFile(file);
+    } else {
+      alert('Please select a valid .eml file');
     }
   };
 
@@ -210,27 +277,85 @@ export default function VerificationModal({
               </div>
             )}
 
-            {/* Other Proof Types */}
+            {/* ZK-Email Verification */}
             {currentRequirement.proofType === 2 && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
                 <div className="text-center">
                   <div className="text-2xl mb-2">📧</div>
-                  <h4 className="font-semibold text-green-900 mb-2">Email Verification</h4>
+                  <h4 className="font-semibold text-green-900 mb-2">ZK-Email Verification</h4>
                   <p className="text-green-700 text-sm mb-4">
-                    Upload your email proof file (.eml)
+                    Upload your ZK-Verify hackerhouse acceptance email (.eml)
                   </p>
-                  <input
-                    type="file"
-                    accept=".eml"
-                    className="w-full p-2 border border-green-300 rounded-lg mb-4"
-                  />
+
+                  {/* File Upload */}
+                  <div className="mb-4">
+                    <label className="block w-full">
+                      <div className={`border-2 border-dashed rounded-lg p-4 transition-colors cursor-pointer ${
+                        selectedFile
+                          ? "border-green-400 bg-green-50"
+                          : "border-green-300 hover:border-green-400"
+                      }`}>
+                        <div className="text-center">
+                          <Upload className="w-8 h-8 mx-auto mb-2 text-green-600" />
+                          <p className="text-sm text-green-700">
+                            {selectedFile ? selectedFile.name : "Click to upload .eml file"}
+                          </p>
+                        </div>
+                      </div>
+                      <input
+                        type="file"
+                        accept=".eml"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  {/* ZK-Email Error Display */}
+                  {zkEmailError && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                      <p className="text-red-700 text-sm">{zkEmailError}</p>
+                    </div>
+                  )}
+
+                  {/* Verification Info */}
+                  <div className="bg-white border border-green-200 rounded-lg p-3 mb-4 text-left">
+                    <h5 className="font-medium text-green-900 mb-2">✅ ZK-Email Verification Process:</h5>
+                    <ul className="text-xs text-green-700 space-y-1">
+                      <li>• Validates ZK-Verify hackerhouse acceptance</li>
+                      <li>• Extracts your email securely</li>
+                      <li>• Encrypts and stores in Lighthouse</li>
+                      <li>• Grants buyer access to encrypted data</li>
+                      <li>• Triggers automatic payment on success</li>
+                    </ul>
+                  </div>
+
                   <Button
-                    onClick={handleSelfVerification}
-                    disabled={isVerifying || isSubmitting}
+                    onClick={handleZkEmailVerification}
+                    disabled={!selectedFile || isVerifying || isSubmitting || isZkEmailLoading}
                     className="w-full bg-green-600 hover:bg-green-700 text-white"
                   >
-                    {isVerifying ? "Verifying..." : "Verify Email"}
+                    {isVerifying || isZkEmailLoading ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white"></div>
+                        <span>Verifying & Storing...</span>
+                      </div>
+                    ) : (
+                      "Verify & Store Email"
+                    )}
                   </Button>
+
+                  {/* Success Message */}
+                  {encryptedDataCid && (
+                    <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-blue-700 text-sm">
+                        ✅ Email encrypted and stored successfully!
+                      </p>
+                      <p className="text-blue-600 text-xs mt-1">
+                        CID: {encryptedDataCid.substring(0, 20)}...
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

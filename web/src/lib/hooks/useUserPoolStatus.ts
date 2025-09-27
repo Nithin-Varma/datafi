@@ -24,11 +24,18 @@ export function useUserPoolStatus(poolAddress: string, userAddress: string | nul
     joinedError
   });
 
-  // Note: isUserFullyVerified function was removed from contract
-  // For now, we'll assume users are not fully verified until they complete all proofs
-  const isFullyVerified = false;
-  const isVerifiedLoading = false;
-  const verifiedError = null;
+  // Check if user is fully verified
+  const { data: isFullyVerified, isLoading: isVerifiedLoading, error: verifiedError } = useReadContract({
+    address: poolAddress as `0x${string}`,
+    abi: POOL_ABI,
+    functionName: "isUserFullyVerified",
+    args: userAddress ? [userAddress as `0x${string}`] : undefined,
+    query: {
+      enabled: !!userAddress && !!poolAddress,
+      staleTime: 5000,
+      refetchInterval: 10000,
+    },
+  });
 
   return {
     hasJoined: hasJoined || false,

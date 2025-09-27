@@ -1,7 +1,7 @@
-// Contract addresses for Base Sepolia - Update these with your deployed contract addresses
+// Contract addresses for Base Sepolia - Updated with proper verification logic
 export const CONTRACT_ADDRESSES = {
-  USER_FACTORY: "0x91fCfa6A5AC782e0dFdF8Cf2b32CC2c5d6f0Fd7f", // Update with your Base Sepolia address
-  POOL_FACTORY: "0xD918C3c00f5B919f33bEF07a4048AB0D61feDC0d", // Update with your Base Sepolia address
+  USER_FACTORY: "0xc3D0b9befd1aD95E023E38D4265A6b81816ca675", // Updated with proper verification logic
+  POOL_FACTORY: "0x04eb5EA0980B921d284e2759Acf23dAcEB9CeF1a", // Updated with proper verification logic
 } as const;
 
 // WalletConnect Project ID - Get from https://cloud.walletconnect.com/
@@ -425,9 +425,30 @@ export const POOL_ABI = [
     "type": "function"
   },
   {
+    "inputs": [{"name": "_user", "type": "address"}],
+    "name": "isUserFullyVerified",
+    "outputs": [{"name": "", "type": "bool"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [{"name": "_user", "type": "address"}, {"name": "_proofName", "type": "string"}],
     "name": "getUserProofStatus",
     "outputs": [{"name": "", "type": "bool"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getVerifiedSellers",
+    "outputs": [{"name": "", "type": "address[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getVerifiedSellersCount",
+    "outputs": [{"name": "", "type": "uint256"}],
     "stateMutability": "view",
     "type": "function"
   }
