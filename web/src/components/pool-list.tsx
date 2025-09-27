@@ -120,40 +120,56 @@ export function PoolList() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+    <div className="space-y-8">
+      <div className="text-center mb-8">
+        <div className="w-20 h-20 bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+          <span className="text-3xl">🔍</span>
+        </div>
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">
           Available Data Pools
         </h2>
-        
-        <div className="flex space-x-2">
-          <Button
-            onClick={() => setFilter("all")}
-            variant={filter === "all" ? "default" : "outline"}
-            size="sm"
-          >
-            All
-          </Button>
-          <Button
-            onClick={() => setFilter("email")}
-            variant={filter === "email" ? "default" : "outline"}
-            size="sm"
-          >
-            Email
-          </Button>
-          <Button
-            onClick={() => setFilter("phone")}
-            variant={filter === "phone" ? "default" : "outline"}
-            size="sm"
-          >
-            Phone
-          </Button>
-        </div>
+        <p className="text-gray-600">
+          Discover and join data pools to start earning
+        </p>
+      </div>
+
+      <div className="flex flex-wrap justify-center gap-3 mb-8">
+        <Button
+          onClick={() => setFilter("all")}
+          className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+            filter === "all"
+              ? "bg-blue-50 text-blue-700 border border-blue-200"
+              : "bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+          }`}
+        >
+          All Pools
+        </Button>
+        <Button
+          onClick={() => setFilter("email")}
+          className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+            filter === "email"
+              ? "bg-blue-50 text-blue-700 border border-blue-200"
+              : "bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+          }`}
+        >
+          📧 Email
+        </Button>
+        <Button
+          onClick={() => setFilter("phone")}
+          className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+            filter === "phone"
+              ? "bg-blue-50 text-blue-700 border border-blue-200"
+              : "bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+          }`}
+        >
+          📱 Phone
+        </Button>
       </div>
 
       {filteredPools.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-gray-500 dark:text-gray-400">
+        <div className="text-center py-12">
+          <div className="text-6xl mb-4">🔍</div>
+          <p className="text-gray-600 text-lg">
             No pools found matching your criteria.
           </p>
         </div>
@@ -162,97 +178,98 @@ export function PoolList() {
           {filteredPools.map((pool, index) => (
             <div
               key={pool.address}
-              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow"
+              className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-lg hover:border-blue-200 transition-all duration-300 hover:scale-105"
             >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                    {pool.info.name}
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300 mb-2">
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl flex items-center justify-center">
+                      <span className="text-lg">📊</span>
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-1">
+                        {pool.info.name}
+                      </h3>
+                      <p className="text-gray-600 text-sm">
+                        {pool.info.dataType} • Created {formatDate(pool.info.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-gray-700 mb-4 leading-relaxed">
                     {pool.info.description}
                   </p>
-                  <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                    <span>Data Type: {pool.info.dataType}</span>
-                    <span>•</span>
-                    <span>Created: {formatDate(pool.info.createdAt)}</span>
-                    <span>•</span>
-                    <span>Deadline: {formatDate(pool.info.deadline)}</span>
-                  </div>
                 </div>
                 
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-blue-600">
+                <div className="text-right ml-6">
+                  <div className="text-3xl font-bold text-gray-900 mb-1">
                     {formatEther(pool.info.pricePerData)} ETH
                   </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                  <div className="text-gray-600 text-sm">
                     per data point
                   </div>
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-3 gap-4 mb-4">
-                <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Total Budget</div>
-                  <div className="font-semibold text-gray-900 dark:text-white">
+              <div className="grid md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                  <div className="text-sm text-gray-600 mb-1">Total Budget</div>
+                  <div className="text-xl font-bold text-gray-900">
                     {formatEther(pool.info.totalBudget)} ETH
                   </div>
                 </div>
                 
-                <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Remaining Budget</div>
-                  <div className="font-semibold text-gray-900 dark:text-white">
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                  <div className="text-sm text-gray-600 mb-1">Remaining</div>
+                  <div className="text-xl font-bold text-gray-900">
                     {formatEther(pool.info.remainingBudget)} ETH
                   </div>
                 </div>
                 
-                <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Verified Sellers</div>
-                  <div className="font-semibold text-gray-900 dark:text-white">
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                  <div className="text-sm text-gray-600 mb-1">Sellers</div>
+                  <div className="text-xl font-bold text-gray-900">
                     {pool.verifiedSellersCount} / {pool.totalSellers}
                   </div>
                 </div>
               </div>
 
               <div className="flex justify-between items-center">
-                <div className="flex items-center space-x-2">
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                <div className="flex items-center space-x-3">
+                  <span className={`px-3 py-1 text-sm font-semibold rounded-full ${
                     pool.info.isActive && !isPoolExpired(pool.info.deadline)
-                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                      : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                      ? "bg-green-100 text-green-800 border border-green-200"
+                      : "bg-red-100 text-red-800 border border-red-200"
                   }`}>
-                    {pool.info.isActive && !isPoolExpired(pool.info.deadline) ? "Active" : "Inactive"}
+                    {pool.info.isActive && !isPoolExpired(pool.info.deadline) ? "🟢 Active" : "🔴 Inactive"}
                   </span>
                   
                   {isPoolExpired(pool.info.deadline) && (
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                      Expired
+                    <span className="px-3 py-1 text-sm font-semibold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
+                      ⏰ Expired
                     </span>
                   )}
                 </div>
                 
-                <div className="flex space-x-2">
+                <div className="flex space-x-3">
                   <Button
-                    variant="outline"
-                    size="sm"
                     onClick={() => {
                       // Navigate to pool details or join pool
                       console.log("Join pool:", pool.address);
                     }}
                     disabled={!pool.info.isActive || isPoolExpired(pool.info.deadline)}
+                    className="bg-gradient-to-r from-blue-600 to-blue-800 text-white font-semibold px-6 py-2 rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
                   >
-                    {pool.verifiedSellersCount > 0 ? "Buy Data" : "Join Pool"}
+                    {pool.verifiedSellersCount > 0 ? "💰 Buy Data" : "🚀 Join Pool"}
                   </Button>
                   
                   <Button
-                    variant="outline"
-                    size="sm"
                     onClick={() => {
                       // Show pool details
                       console.log("View details:", pool.address);
                     }}
+                    className="bg-gray-50 text-gray-700 font-semibold px-6 py-2 rounded-xl border border-gray-200 hover:bg-gray-100 transition-all duration-300"
                   >
-                    View Details
+                    👁️ Details
                   </Button>
                 </div>
               </div>

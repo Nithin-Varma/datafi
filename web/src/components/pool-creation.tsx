@@ -73,15 +73,23 @@ export function PoolCreation() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-        Create Data Pool
-      </h2>
+    <div className="max-w-4xl mx-auto">
+      <div className="text-center mb-8">
+        <div className="w-20 h-20 bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+          <span className="text-3xl">🏊</span>
+        </div>
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">
+          Create Data Pool
+        </h2>
+        <p className="text-gray-600">
+          Set up your data marketplace and start collecting valuable insights
+        </p>
+      </div>
       
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700">
               Pool Name *
             </label>
             <input
@@ -90,14 +98,14 @@ export function PoolCreation() {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
               placeholder="e.g., Zomato Users Email Data"
               required
             />
           </div>
 
-          <div>
-            <label htmlFor="dataType" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <div className="space-y-2">
+            <label htmlFor="dataType" className="block text-sm font-medium text-gray-700">
               Data Type *
             </label>
             <select
@@ -105,7 +113,7 @@ export function PoolCreation() {
               name="dataType"
               value={formData.dataType}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
               required
             >
               <option value="email">Email Address</option>
@@ -116,8 +124,8 @@ export function PoolCreation() {
           </div>
         </div>
 
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <div className="space-y-2">
+          <label htmlFor="description" className="block text-sm font-medium text-gray-700">
             Description *
           </label>
           <textarea
@@ -125,16 +133,16 @@ export function PoolCreation() {
             name="description"
             value={formData.description}
             onChange={handleChange}
-            rows={3}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            rows={4}
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
             placeholder="Describe what data you're looking for and how it will be used..."
             required
           />
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="pricePerData" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="space-y-2">
+            <label htmlFor="pricePerData" className="block text-sm font-medium text-gray-700">
               Price per Data (ETH) *
             </label>
             <input
@@ -145,14 +153,14 @@ export function PoolCreation() {
               onChange={handleChange}
               step="0.001"
               min="0"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
               placeholder="0.01"
               required
             />
           </div>
 
-          <div>
-            <label htmlFor="totalBudget" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <div className="space-y-2">
+            <label htmlFor="totalBudget" className="block text-sm font-medium text-gray-700">
               Total Budget (ETH) *
             </label>
             <input
@@ -163,37 +171,44 @@ export function PoolCreation() {
               onChange={handleChange}
               step="0.01"
               min="0"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
               placeholder="1.0"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="deadline" className="block text-sm font-medium text-gray-700">
+              Duration (Days) *
+            </label>
+            <input
+              type="number"
+              id="deadline"
+              name="deadline"
+              value={formData.deadline}
+              onChange={handleChange}
+              min="1"
+              max="365"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+              placeholder="30"
               required
             />
           </div>
         </div>
 
-        <div>
-          <label htmlFor="deadline" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Pool Duration (Days)
-          </label>
-          <input
-            type="number"
-            id="deadline"
-            name="deadline"
-            value={formData.deadline}
-            onChange={handleChange}
-            min="1"
-            max="365"
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-            placeholder="30"
-            required
-          />
-        </div>
-
         <Button
           type="submit"
           disabled={isCreatingPool}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-md disabled:opacity-50"
+          className="w-full bg-gradient-to-r from-blue-600 to-blue-800 text-white font-semibold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
         >
-          {isCreatingPool ? "Creating Pool..." : "Create Pool"}
+          {isCreatingPool ? (
+            <div className="flex items-center justify-center space-x-2">
+              <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/20 border-t-white"></div>
+              <span>Creating Pool...</span>
+            </div>
+          ) : (
+            "Create Pool"
+          )}
         </Button>
       </form>
     </div>

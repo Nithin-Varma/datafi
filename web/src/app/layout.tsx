@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DataFi",
+  title: "DataFi - Internet Verifiable Markets",
   description: "Decentralized Data Finance Platform",
 };
 
