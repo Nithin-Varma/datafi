@@ -1,16 +1,16 @@
-// Contract addresses - Update these with your deployed contract addresses
+// Contract addresses for Base Sepolia - Update these with your deployed contract addresses
 export const CONTRACT_ADDRESSES = {
-  USER_FACTORY: "0x029ea9909A528106CD3796107e0700A48a5aFd93",
-  POOL_FACTORY: "0xEF364ee4D477E0Dbff90DEB744eD8C4603B8D5F6",
+  USER_FACTORY: "0xEF364ee4D477E0Dbff90DEB744eD8C4603B8D5F6", // Update with your Base Sepolia address
+  POOL_FACTORY: "0x2c80D5845BC9Cee02Bf3eA82cD1A0Ec1e5FF3dbd", // Update with your Base Sepolia address
 } as const;
 
 // WalletConnect Project ID - Get from https://cloud.walletconnect.com/
 export const WALLETCONNECT_PROJECT_ID = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "your_walletconnect_project_id";
 
-// Network configuration
+// Network configuration for Base Sepolia
 export const CHAIN_CONFIG = {
-  chainId: 11155111,
-  rpcUrl: process.env.NEXT_PUBLIC_RPC_URL || "https://sepolia.infura.io/v3/your_project_id",
+  chainId: 84532,
+  rpcUrl: process.env.NEXT_PUBLIC_RPC_URL || "https://sepolia.base.org",
 } as const;
 
 // Contract ABIs for new simplified contracts
@@ -58,13 +58,20 @@ export const POOL_FACTORY_ABI = [
       {"name": "_name", "type": "string"},
       {"name": "_description", "type": "string"},
       {"name": "_dataType", "type": "string"},
+      {"name": "_proofRequirements", "type": "tuple[]", "components": [
+        {"name": "name", "type": "string"},
+        {"name": "description", "type": "string"},
+        {"name": "proofType", "type": "uint8"},
+        {"name": "isRequired", "type": "bool"}
+      ]},
       {"name": "_pricePerData", "type": "uint256"},
       {"name": "_totalBudget", "type": "uint256"},
-      {"name": "_deadline", "type": "uint256"}
+      {"name": "_deadline", "type": "uint256"},
+      {"name": "_owner", "type": "address"}
     ],
     "name": "createPool",
     "outputs": [{"name": "", "type": "address"}],
-    "stateMutability": "nonpayable",
+    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -117,6 +124,12 @@ export const USER_ABI = [
       {"name": "_name", "type": "string"},
       {"name": "_description", "type": "string"},
       {"name": "_dataType", "type": "string"},
+      {"name": "_proofRequirements", "type": "tuple[]", "components": [
+        {"name": "name", "type": "string"},
+        {"name": "description", "type": "string"},
+        {"name": "proofType", "type": "uint8"},
+        {"name": "isRequired", "type": "bool"}
+      ]},
       {"name": "_pricePerData", "type": "uint256"},
       {"name": "_totalBudget", "type": "uint256"},
       {"name": "_deadline", "type": "uint256"}
@@ -173,6 +186,28 @@ export const USER_ABI = [
     "name": "getTotalEarned",
     "outputs": [{"name": "", "type": "uint256"}],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"name": "_poolAddress", "type": "address"},
+      {"name": "_proofName", "type": "string"},
+      {"name": "_proofHash", "type": "bytes32"}
+    ],
+    "name": "submitProof",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"name": "_poolAddress", "type": "address"},
+      {"name": "_proofName", "type": "string"},
+      {"name": "_selfProofHash", "type": "bytes32"}
+    ],
+    "name": "submitSelfProof",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   }
 ] as const;
@@ -245,6 +280,44 @@ export const POOL_ABI = [
     "name": "submitData",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"name": "_proofName", "type": "string"},
+      {"name": "_proofHash", "type": "bytes32"}
+    ],
+    "name": "submitProof",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"name": "_proofName", "type": "string"},
+      {"name": "_selfProofHash", "type": "bytes32"}
+    ],
+    "name": "submitSelfProof",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getProofRequirements",
+    "outputs": [
+      {
+        "components": [
+          {"name": "name", "type": "string"},
+          {"name": "description", "type": "string"},
+          {"name": "proofType", "type": "uint8"},
+          {"name": "isRequired", "type": "bool"}
+        ],
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   }
 ] as const;

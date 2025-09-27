@@ -6,7 +6,7 @@ import { useUser } from "@/lib/hooks/useUser";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { PoolDetailsModal } from "@/components/pool-details-modal";
-import { VerificationModal } from "@/components/verification-modal";
+import VerificationModal from "@/components/verification-modal";
 
 interface PoolCardProps {
   poolAddress: string;
@@ -16,7 +16,7 @@ interface PoolCardProps {
 }
 
 export function PoolCard({ poolAddress, onJoin, onBuy, onViewDetails }: PoolCardProps) {
-  const { poolInfo, verifiedSellersCount, totalSellers, isLoading, error } = usePoolDetails(poolAddress);
+  const { poolInfo, verifiedSellersCount, totalSellers, sellers, isLoading, error } = usePoolDetails(poolAddress);
   const { userContract } = useUser();
   const { joinPool, isLoading: isJoining, isSuccess: joinedSuccessfully } = useJoinPool();
   const [isJoiningPool, setIsJoiningPool] = useState(false);
@@ -74,7 +74,7 @@ export function PoolCard({ poolAddress, onJoin, onBuy, onViewDetails }: PoolCard
 
   // Determine user role
   const isCreator = poolInfo?.creator?.toLowerCase() === userContract?.toLowerCase();
-  const isSeller = poolInfo?.sellers?.includes(userContract || "") || justJoined;
+  const isSeller = sellers?.includes(userContract as `0x${string}` || "" as `0x${string}`) || justJoined;
 
   const handleViewDetails = () => {
     if (isModalLoading) return; // Prevent rapid clicking

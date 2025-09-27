@@ -7,25 +7,32 @@ contract PoolFactory {
     address[] public allPools;
     mapping(address => address[]) public creatorPools;
 
+    // Custom errors
+    error InvalidPrice();
+    error InvalidBudget();
+    error InvalidDeadline();
+
     event PoolCreated(address indexed creator, address indexed poolAddress, string name);
 
     function createPool(
         string memory _name,
         string memory _description,
         string memory _dataType,
+        Pool.ProofRequirement[] memory _proofRequirements,
         uint256 _pricePerData,
         uint256 _totalBudget,
         uint256 _deadline,
-        uint256 _owner
-    ) external returns (address) {
-        require(_pricePerData > 0, "Price must be greater than 0");
-        require(_totalBudget > 0, "Budget must be greater than 0");
-        require(_deadline > block.timestamp, "Deadline must be in future");
+        address _owner
+    ) external payable returns (address) {
+        if (_pricePerData == 0) revert InvalidPrice();
+        if (_totalBudget == 0) revert InvalidBudget();
+        if (_deadline <= block.timestamp) revert InvalidDeadline();
         
         Pool newPool = new Pool(
             _name,
             _description,
             _dataType,
+            _proofRequirements,
             _pricePerData,
             _totalBudget,
             _deadline,
@@ -34,9 +41,15 @@ contract PoolFactory {
         
         address poolAddress = address(newPool);
         allPools.push(poolAddress);
-        creatorPools[msg.sender].push(poolAddress);
+        creatorPools[_owner].push(poolAddress);
         
-        emit PoolCreated(msg.sender, poolAddress, _name);
+        // Forward the ETH to the pool
+        if (msg.value > 0) {
+            (bool success, ) = payable(poolAddress).call{value: msg.value}("");
+            require(success, "Failed to send ETH to pool");
+        }
+        
+        emit PoolCreated(_owner, poolAddress, _name);
         return poolAddress;
     }
 
@@ -45,9 +58,19 @@ contract PoolFactory {
         pool.joinPool();
     }
 
-    function verifySeller(address _poolAddress, address _seller, bool _verified) external {
+    function verifySeller(address _poolAddress, address _seller, bool _verified, bytes32 _proof) external {
         Pool pool = Pool(payable(_poolAddress));
-        pool.verifySeller(_seller, _verified);
+        pool.verifySeller(_seller, _verified, _proof);
+    }
+
+    function submitProof(address _poolAddress, string memory _proofName, bytes32 _proofHash) external {
+        Pool pool = Pool(payable(_poolAddress));
+        pool.submitProof(_proofName, _proofHash);
+    }
+
+    function submitSelfProof(address _poolAddress, string memory _proofName, bytes32 _selfProofHash) external {
+        Pool pool = Pool(payable(_poolAddress));
+        pool.submitSelfProof(_proofName, _selfProofHash);
     }
 
     function getAllPools() external view returns (address[] memory) {
@@ -62,46 +85,4 @@ contract PoolFactory {
         return allPools.length;
     }
 
-    function getActivePools() external view returns (address[] memory) {
-        address[] memory activePools = new address[](allPools.length);
-        uint256 activeCount = 0;
-        
-        for (uint256 i = 0; i < allPools.length; i++) {
-            Pool pool = Pool(payable(allPools[i]));
-            Pool.PoolInfo memory poolInfo = pool.getPoolInfo();
-            
-            if (poolInfo.isActive && block.timestamp <= poolInfo.deadline) {
-                activePools[activeCount] = allPools[i];
-                activeCount++;
-            }
-        }
-        
-        address[] memory result = new address[](activeCount);
-        for (uint256 i = 0; i < activeCount; i++) {
-            result[i] = activePools[i];
-        }
-        
-        return result;
-    }
-
-    function getPoolsByDataType(string memory _dataType) external view returns (address[] memory) {
-        address[] memory matchingPools = new address[](allPools.length);
-        uint256 matchCount = 0;
-        
-        for (uint256 i = 0; i < allPools.length; i++) {
-            Pool pool = Pool(payable(allPools[i]));
-            Pool.PoolInfo memory poolInfo = pool.getPoolInfo();
-            if (keccak256(bytes(poolInfo.dataType)) == keccak256(bytes(_dataType))) {
-                matchingPools[matchCount] = allPools[i];
-                matchCount++;
-            }
-        }
-        
-        address[] memory result = new address[](matchCount);
-        for (uint256 i = 0; i < matchCount; i++) {
-            result[i] = matchingPools[i];
-        }
-        
-        return result;
-    }
 }

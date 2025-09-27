@@ -25,6 +25,7 @@ contract User {
         string memory _name,
         string memory _description,
         string memory _dataType,
+        Pool.ProofRequirement[] memory _proofRequirements,
         uint256 _pricePerData,
         uint256 _totalBudget,
         uint256 _deadline
@@ -35,6 +36,7 @@ contract User {
             _name,
             _description,
             _dataType,
+            _proofRequirements,
             _pricePerData,
             _totalBudget,
             _deadline,
@@ -54,9 +56,19 @@ contract User {
         emit PoolJoined(_poolAddress);
     }
 
-    function verifySeller(address _poolAddress, address _seller, bool _verified) external {
+    function verifySeller(address _poolAddress, address _seller, bool _verified, bytes32 _proof) external {
         require(msg.sender == owner, "Only owner can verify sellers");
-        factory.verifySeller(_poolAddress, _seller, _verified);
+        factory.verifySeller(_poolAddress, _seller, _verified, _proof);
+    }
+
+    function submitProof(address _poolAddress, string memory _proofName, bytes32 _proofHash) external {
+        require(msg.sender == owner, "Only owner can submit proofs");
+        factory.submitProof(_poolAddress, _proofName, _proofHash);
+    }
+
+    function submitSelfProof(address _poolAddress, string memory _proofName, bytes32 _selfProofHash) external {
+        require(msg.sender == owner, "Only owner can submit Self proofs");
+        factory.submitSelfProof(_poolAddress, _proofName, _selfProofHash);
     }
 
     function recordSpending(uint256 _amount) external {

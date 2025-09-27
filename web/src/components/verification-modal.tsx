@@ -1,281 +1,352 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Button } from "./ui/button";
 import { usePoolDetails } from "@/lib/hooks/usePools";
+import { useSubmitProof, useSubmitSelfProof } from "@/lib/hooks/usePoolActions";
 import { useUser } from "@/lib/hooks/useUser";
-import { useSubmitVerification } from "@/lib/hooks/useVerification";
-import { Button } from "@/components/ui/button";
 
-interface VerificationModalProps {
-  poolAddress: string;
-  isOpen: boolean;
-  onClose: () => void;
+interface ProofRequirement {
+  name: string;
+  description: string;
+  proofType: string;
+  isRequired: boolean;
 }
 
-export function VerificationModal({ poolAddress, isOpen, onClose }: VerificationModalProps) {
-  const { poolInfo, sellers, isLoading } = usePoolDetails(poolAddress);
+interface VerificationModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  poolAddress?: string;
+  proofRequirements?: ProofRequirement[];
+  onProofSubmission?: (proofName: string, proofHash: string, isSelfProof: boolean) => void;
+}
+
+export default function VerificationModal({ 
+  isOpen, 
+  onClose, 
+  poolAddress,
+  proofRequirements = [], 
+  onProofSubmission 
+}: VerificationModalProps) {
+  const [currentProofIndex, setCurrentProofIndex] = useState(0);
+  const [submittedProofs, setSubmittedProofs] = useState<Set<string>>(new Set());
+  const [emailFile, setEmailFile] = useState<File | null>(null);
+  const [customProof, setCustomProof] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [poolProofRequirements, setPoolProofRequirements] = useState<ProofRequirement[]>([]);
+
+  // Load pool details if poolAddress is provided
+  const { poolInfo } = usePoolDetails(poolAddress || "");
   const { userContract } = useUser();
-  const { submitVerification, isLoading: isSubmitting, isSuccess: submissionSuccess } = useSubmitVerification();
-  const [verificationData, setVerificationData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    age: "",
-    country: "",
-    additionalInfo: ""
-  });
+  const { submitProof } = useSubmitProof();
+  const { submitSelfProof } = useSubmitSelfProof();
+
+  // Load proof requirements from pool contract
+  useEffect(() => {
+    if (poolAddress && poolInfo) {
+      // TODO: Load proof requirements from contract
+      // For now, use default requirements
+      setPoolProofRequirements([
+        {
+          name: "age_verification",
+          description: "Must be over 18 years old",
+          proofType: "SELF_AGE_VERIFICATION",
+          isRequired: true
+        },
+        {
+          name: "indian_citizen",
+          description: "Must be Indian citizen",
+          proofType: "SELF_NATIONALITY",
+          isRequired: true
+        }
+      ]);
+    }
+  }, [poolAddress, poolInfo]);
+
+  // Use provided proof requirements or loaded ones
+  const requirements = proofRequirements.length > 0 ? proofRequirements : poolProofRequirements;
 
   if (!isOpen) return null;
 
-  // Check if user is a seller in this pool
-  const isSeller = sellers?.includes(userContract || "");
+  const currentProof = requirements[currentProofIndex];
+  const isLastProof = currentProofIndex === requirements.length - 1;
+  const allProofsSubmitted = submittedProofs.size === requirements.length;
 
-  const formatEther = (wei: bigint) => {
-    return Number(wei) / 1e18;
-  };
-
-  const formatDate = (timestamp: bigint) => {
-    return new Date(Number(timestamp) * 1000).toLocaleDateString();
-  };
-
-  const isPoolExpired = (deadline: bigint) => {
-    return Date.now() / 1000 > Number(deadline);
-  };
-
-  const handleVerification = async () => {
-    if (!userContract || !poolAddress) return;
+  const handleSelfVerification = async () => {
+    // This would integrate with your Self verification system
+    // For now, we'll simulate the process
+    setIsSubmitting(true);
     
     try {
-      // Encrypt the verification data (simplified for now)
-      const encryptedData = JSON.stringify(verificationData);
+      // TODO: Integrate with Self Protocol
+      // This would trigger the Self verification flow
+      console.log("Starting Self verification for:", currentProof.name);
       
-      await submitVerification(poolAddress, encryptedData);
-      alert("Verification submitted! Your data will be reviewed by the pool creator.");
-      onClose();
+      // Simulate verification process
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Generate a mock proof hash (in real implementation, this would come from Self)
+      const proofHash = `0x${Math.random().toString(16).substr(2, 64)}`;
+      
+      if (onProofSubmission) {
+        await onProofSubmission(currentProof.name, proofHash, true);
+      } else if (userContract && poolAddress) {
+        await submitSelfProof(userContract, poolAddress, currentProof.name, proofHash);
+      }
+      setSubmittedProofs((prev: Set<string>) => new Set([...prev, currentProof.name]));
+      
+      if (!isLastProof) {
+        setCurrentProofIndex(prev => prev + 1);
+      }
     } catch (error) {
-      console.error("Verification failed:", error);
-      alert("Verification failed. Please try again.");
+      console.error("Self verification failed:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setVerificationData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+  const handleEmailUpload = async () => {
+    if (!emailFile) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      // TODO: Implement ZK proof generation from .eml file
+      // This would process the email file and generate a ZK proof
+      console.log("Processing email file:", emailFile.name);
+      
+      // Simulate file processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Generate a mock proof hash (in real implementation, this would be the ZK proof)
+      const proofHash = `0x${Math.random().toString(16).substr(2, 64)}`;
+      
+      if (onProofSubmission) {
+        await onProofSubmission(currentProof.name, proofHash, false);
+      } else if (userContract && poolAddress) {
+        await submitProof(userContract, poolAddress, currentProof.name, proofHash);
+      }
+      setSubmittedProofs((prev: Set<string>) => new Set([...prev, currentProof.name]));
+      
+      if (!isLastProof) {
+        setCurrentProofIndex(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error("Email verification failed:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  if (isLoading) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4">
-          <div className="animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-            <div className="h-20 bg-gray-200 rounded mb-4"></div>
-            <div className="h-8 bg-gray-200 rounded"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleCustomProof = async () => {
+    if (!customProof.trim()) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Generate a mock proof hash for custom proof
+      const proofHash = `0x${Math.random().toString(16).substr(2, 64)}`;
+      
+      if (onProofSubmission) {
+        await onProofSubmission(currentProof.name, proofHash, false);
+      } else if (userContract && poolAddress) {
+        await submitProof(userContract, poolAddress, currentProof.name, proofHash);
+      }
+      setSubmittedProofs((prev: Set<string>) => new Set([...prev, currentProof.name]));
+      
+      if (!isLastProof) {
+        setCurrentProofIndex(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error("Custom proof submission failed:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-  // Check if user is authorized to verify
-  if (!isSeller) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4">
-          <div className="text-center">
-            <div className="text-6xl mb-4">🚫</div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h2>
-            <p className="text-gray-600 mb-6">
-              You need to join this pool as a seller before you can verify your data.
-            </p>
-            <button
-              onClick={onClose}
-              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.name.endsWith('.eml')) {
+      setEmailFile(file);
+    } else {
+      alert("Please select a valid .eml file");
+    }
+  };
 
-  return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-200"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto transform transition-transform duration-200 scale-100">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">
-            Verify Your Data for {poolInfo?.name}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl"
+  const getProofIcon = (proofType: string) => {
+    switch (proofType) {
+      case 'SELF_AGE_VERIFICATION':
+      case 'SELF_NATIONALITY':
+        return '🔐';
+      case 'EMAIL_VERIFICATION':
+        return '📧';
+      case 'HACKERHOUSE_INVITATION':
+        return '🏠';
+      default:
+        return '📄';
+    }
+  };
+
+  const renderProofStep = () => {
+    const isSubmitted = submittedProofs.has(currentProof.name);
+    
+    if (isSubmitted) {
+      return (
+        <div className="text-center py-8">
+          <div className="text-6xl text-green-600 mb-4">✓</div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Proof Submitted!</h3>
+          <p className="text-gray-600 mb-6">{currentProof.description} has been verified.</p>
+          <Button
+            onClick={() => {
+              if (!isLastProof) {
+                setCurrentProofIndex(prev => prev + 1);
+              }
+            }}
+            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg"
           >
-            ×
-          </button>
+            {isLastProof ? "Complete Verification" : "Next Proof"}
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <div className="text-4xl mb-4">{getProofIcon(currentProof.proofType)}</div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">{currentProof.description}</h3>
+          <p className="text-gray-600">
+            Step {currentProofIndex + 1} of {proofRequirements.length}
+          </p>
         </div>
 
-        {/* Pool Info */}
-        <div className="bg-blue-50 p-4 rounded-lg mb-6">
-          <h3 className="font-semibold text-blue-900 mb-2">Pool Information</h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p><strong>Data Type:</strong> {poolInfo?.dataType}</p>
-              <p><strong>Price per Data:</strong> {formatEther(poolInfo?.pricePerData || 0n)} ETH</p>
-            </div>
-            <div>
-              <p><strong>Deadline:</strong> {formatDate(poolInfo?.deadline || 0n)}</p>
-              <p><strong>Status:</strong> 
-                <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
-                  poolInfo?.isActive && !isPoolExpired(poolInfo?.deadline || 0n)
-                    ? "bg-green-100 text-green-800"
-                    : "bg-red-100 text-red-800"
-                }`}>
-                  {poolInfo?.isActive && !isPoolExpired(poolInfo?.deadline || 0n) ? "Active" : "Inactive"}
-                </span>
+        {/* Self Verification */}
+        {(currentProof.proofType === 'SELF_AGE_VERIFICATION' || currentProof.proofType === 'SELF_NATIONALITY') && (
+          <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-semibold text-blue-900 mb-2">Self Protocol Verification</h4>
+              <p className="text-blue-800 text-sm">
+                This will open the Self verification process in a new window. 
+                You'll need to complete the verification and return here.
               </p>
             </div>
+            <Button
+              onClick={handleSelfVerification}
+              disabled={isSubmitting}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold"
+            >
+              {isSubmitting ? "Verifying..." : "Start Self Verification"}
+            </Button>
           </div>
-        </div>
+        )}
 
-        {/* Verification Form */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">Provide Your Information</h3>
-          
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-              <input
-                type="text"
-                name="name"
-                value={verificationData.name}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter your full name"
-                required
-              />
+        {/* Email Verification */}
+        {currentProof.proofType === 'EMAIL_VERIFICATION' && (
+          <div className="space-y-4">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <h4 className="font-semibold text-green-900 mb-2">Email Verification</h4>
+              <p className="text-green-800 text-sm">
+                Upload your Netflix subscription email (.eml file) for ZK proof generation.
+              </p>
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+            <div className="space-y-3">
               <input
-                type="email"
-                name="email"
-                value={verificationData.email}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter your email"
-                required
+                type="file"
+                accept=".eml"
+                onChange={handleFileChange}
+                className="w-full p-3 border border-gray-300 rounded-lg"
               />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-              <input
-                type="tel"
-                name="phone"
-                value={verificationData.phone}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter your phone number"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
-              <input
-                type="number"
-                name="age"
-                value={verificationData.age}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter your age"
-                min="18"
-                max="100"
-              />
-            </div>
-            
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
-              <select
-                name="country"
-                value={verificationData.country}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              {emailFile && (
+                <div className="text-sm text-gray-600">
+                  Selected: {emailFile.name}
+                </div>
+              )}
+              <Button
+                onClick={handleEmailUpload}
+                disabled={!emailFile || isSubmitting}
+                className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold"
               >
-                <option value="">Select your country</option>
-                <option value="US">United States</option>
-                <option value="IN">India</option>
-                <option value="UK">United Kingdom</option>
-                <option value="CA">Canada</option>
-                <option value="AU">Australia</option>
-                <option value="DE">Germany</option>
-                <option value="FR">France</option>
-                <option value="JP">Japan</option>
-                <option value="CN">China</option>
-                <option value="BR">Brazil</option>
-                <option value="other">Other</option>
-              </select>
+                {isSubmitting ? "Processing..." : "Upload & Verify"}
+              </Button>
             </div>
-            
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Additional Information</label>
+          </div>
+        )}
+
+        {/* Custom Proof */}
+        {currentProof.proofType === 'HACKERHOUSE_INVITATION' && (
+          <div className="space-y-4">
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+              <h4 className="font-semibold text-purple-900 mb-2">HackerHouse Invitation</h4>
+              <p className="text-purple-800 text-sm">
+                Provide proof of your HackerHouse invitation.
+              </p>
+            </div>
+            <div className="space-y-3">
               <textarea
-                name="additionalInfo"
-                value={verificationData.additionalInfo}
-                onChange={handleInputChange}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Any additional information you'd like to provide..."
+                value={customProof}
+                onChange={(e) => setCustomProof(e.target.value)}
+                placeholder="Describe your HackerHouse invitation or provide proof..."
+                className="w-full p-3 border border-gray-300 rounded-lg h-24 resize-none"
+              />
+              <Button
+                onClick={handleCustomProof}
+                disabled={!customProof.trim() || isSubmitting}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-semibold"
+              >
+                {isSubmitting ? "Submitting..." : "Submit Proof"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Verify Your Identity</h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 text-2xl"
+            >
+              ×
+            </button>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mb-6">
+            <div className="flex justify-between text-sm text-gray-600 mb-2">
+              <span>Progress</span>
+              <span>{submittedProofs.size} / {requirements.length}</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${(submittedProofs.size / requirements.length) * 100}%` }}
               />
             </div>
           </div>
-        </div>
 
-        {/* Privacy Notice */}
-        <div className="bg-yellow-50 p-4 rounded-lg mt-6">
-          <div className="flex items-start space-x-2">
-            <span className="text-yellow-600 text-lg">⚠️</span>
-            <div className="text-sm text-yellow-800">
-              <p className="font-semibold mb-1">Privacy Notice:</p>
-              <p>Your data will be encrypted and stored securely. Only the pool creator can verify your information. You will be paid {formatEther(poolInfo?.pricePerData || 0n)} ETH per data point once verified.</p>
+          {renderProofStep()}
+
+          {allProofsSubmitted && (
+            <div className="text-center py-8">
+              <div className="text-6xl text-green-600 mb-4">🎉</div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Verification Complete!</h3>
+              <p className="text-gray-600 mb-6">
+                You have successfully verified all required proofs. You are now eligible to participate in this pool.
+              </p>
+              <Button
+                onClick={onClose}
+                className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-semibold"
+              >
+                Close
+              </Button>
             </div>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex justify-end space-x-3 mt-8">
-          <Button
-            onClick={onClose}
-            className="px-6 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleVerification}
-            disabled={isSubmitting || !verificationData.name || !verificationData.email}
-            className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {isSubmitting ? (
-              <div className="flex items-center space-x-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white"></div>
-                <span>Submitting...</span>
-              </div>
-            ) : (
-              "Submit Verification"
-            )}
-          </Button>
+          )}
         </div>
       </div>
     </div>

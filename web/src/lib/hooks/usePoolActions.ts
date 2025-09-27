@@ -1,7 +1,7 @@
 "use client";
 
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { CONTRACT_ADDRESSES, USER_ABI, POOL_ABI } from "../config";
+import { CONTRACT_ADDRESSES, USER_ABI, POOL_ABI, POOL_FACTORY_ABI } from "../config";
 
 // Hook for creating a pool through user contract
 export function useCreatePool() {
@@ -15,17 +15,24 @@ export function useCreatePool() {
     name: string,
     description: string,
     dataType: string,
+    proofRequirements: Array<{
+      name: string;
+      description: string;
+      proofType: number;
+      isRequired: boolean;
+    }>,
     pricePerData: bigint,
     totalBudget: bigint,
     deadline: bigint
   ) => {
     try {
+      // Try calling PoolFactory directly first
       await createPool.writeContract({
-        address: userContractAddress as `0x${string}`,
-        abi: USER_ABI,
+        address: CONTRACT_ADDRESSES.POOL_FACTORY as `0x${string}`,
+        abi: POOL_FACTORY_ABI,
         functionName: "createPool",
-        args: [name, description, dataType, pricePerData, totalBudget, deadline],
-        value: 0n,
+        args: [name, description, dataType, proofRequirements, pricePerData, totalBudget, deadline, userContractAddress],
+        value: totalBudget, // Send the total budget as ETH
       });
     } catch (err) {
       console.error("Error creating pool:", err);
@@ -185,6 +192,74 @@ export function useClosePool() {
 
   return {
     closePool: closePoolAction,
+    isLoading,
+    isSuccess,
+    error,
+  };
+}
+
+// Hook for submitting proof to a pool
+export function useSubmitProof() {
+  const submitProof = useWriteContract();
+  const { isLoading, isSuccess, error } = useWaitForTransactionReceipt({
+    hash: submitProof.data,
+  });
+
+  const submitProofAction = async (
+    userContractAddress: string,
+    poolAddress: string,
+    proofName: string,
+    proofHash: string
+  ) => {
+    try {
+      await submitProof.writeContract({
+        address: userContractAddress as `0x${string}`,
+        abi: USER_ABI,
+        functionName: "submitProof",
+        args: [poolAddress, proofName, proofHash],
+      });
+    } catch (err) {
+      console.error("Error submitting proof:", err);
+      throw err;
+    }
+  };
+
+  return {
+    submitProof: submitProofAction,
+    isLoading,
+    isSuccess,
+    error,
+  };
+}
+
+// Hook for submitting Self proof to a pool
+export function useSubmitSelfProof() {
+  const submitSelfProof = useWriteContract();
+  const { isLoading, isSuccess, error } = useWaitForTransactionReceipt({
+    hash: submitSelfProof.data,
+  });
+
+  const submitSelfProofAction = async (
+    userContractAddress: string,
+    poolAddress: string,
+    proofName: string,
+    selfProofHash: string
+  ) => {
+    try {
+      await submitSelfProof.writeContract({
+        address: userContractAddress as `0x${string}`,
+        abi: USER_ABI,
+        functionName: "submitSelfProof",
+        args: [poolAddress, proofName, selfProofHash],
+      });
+    } catch (err) {
+      console.error("Error submitting Self proof:", err);
+      throw err;
+    }
+  };
+
+  return {
+    submitSelfProof: submitSelfProofAction,
     isLoading,
     isSuccess,
     error,
