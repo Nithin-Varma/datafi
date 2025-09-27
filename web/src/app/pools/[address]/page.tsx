@@ -8,6 +8,7 @@ import { usePoolDetails } from "@/lib/hooks/usePools";
 import { useJoinPool, useVerifySeller } from "@/lib/hooks/usePoolActions";
 import { useVerifySeller as useVerifySellerHook } from "@/lib/hooks/useVerification";
 import { useUserPoolStatus } from "@/lib/hooks/useUserPoolStatus";
+import VerificationModal from "@/components/verification-modal";
 import Link from "next/link";
 
 export default function PoolDetailPage() {
@@ -19,19 +20,27 @@ export default function PoolDetailPage() {
   const { poolInfo, sellers, verifiedSellersCount, totalSellers, isLoading, error } = usePoolDetails(poolAddress);
   const { joinPool, isLoading: isJoining, isSuccess: joinedSuccessfully } = useJoinPool();
   const { verifySeller, isLoading: isVerifying } = useVerifySellerHook();
-  const { hasJoined, isFullyVerified, isLoading: statusLoading } = useUserPoolStatus(poolAddress, userContract);
+  const { hasJoined: contractHasJoined, isFullyVerified, isLoading: statusLoading, refetch } = useUserPoolStatus(poolAddress, userContract);
   const [verifyingSeller, setVerifyingSeller] = useState<string | null>(null);
   const [justJoined, setJustJoined] = useState(false);
+  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
+  const [localHasJoined, setLocalHasJoined] = useState(false);
+  
+  // Use contract state or local state (for immediate updates)
+  const hasJoined = contractHasJoined || localHasJoined;
 
   // Show success message when joined
   useEffect(() => {
     if (joinedSuccessfully && !justJoined) {
       setJustJoined(true);
+      setLocalHasJoined(true); // Immediately update local state
+      // Manually refetch the user status after joining
       setTimeout(() => {
+        refetch();
         alert("Successfully joined the pool! You can now submit data.");
       }, 1000);
     }
-  }, [joinedSuccessfully, justJoined]);
+  }, [joinedSuccessfully, justJoined, refetch]);
 
 
   const formatEther = (wei: bigint) => {
@@ -51,17 +60,20 @@ export default function PoolDetailPage() {
                     poolInfo?.creator?.toLowerCase() === userEOA?.toLowerCase();
   const isSeller = hasJoined; // Use contract state instead of local state
   
-  // Debug logging (commented out for production)
-  // console.log("Pool Details Debug:", {
-  //   poolAddress,
-  //   userContract,
-  //   userEOA,
-  //   creator: poolInfo?.creator,
-  //   isCreator,
-  //   isSeller,
-  //   sellers,
-  //   hasJoined
-  // });
+  // Debug logging
+  console.log("Pool Details Debug:", {
+    poolAddress,
+    userContract,
+    userEOA,
+    creator: poolInfo?.creator,
+    isCreator,
+    isSeller,
+    sellers,
+    hasJoined,
+    contractHasJoined,
+    localHasJoined,
+    joinedSuccessfully
+  });
 
   const handleJoinPool = async () => {
     if (!userContract) {
@@ -95,6 +107,21 @@ export default function PoolDetailPage() {
       alert("Verification failed. Please try again.");
     } finally {
       setVerifyingSeller(null);
+    }
+  };
+
+  const handleSubmitAndVerify = () => {
+    // Check if pool has age or nationality proof requirements
+    const hasAgeOrNationality = poolInfo?.proofRequirements?.some(
+      (req: any) => req.proofType === 0 || req.proofType === 1 // 0 = age, 1 = nationality
+    );
+    
+    if (hasAgeOrNationality) {
+      // Redirect to Self page for verification
+      router.push('/self');
+    } else {
+      // Show verification modal for other proof types
+      setIsVerificationModalOpen(true);
     }
   };
 
@@ -274,21 +301,13 @@ export default function PoolDetailPage() {
                         </div>
                         
                         {isCreator ? (
-                          <div className="flex space-x-2">
-                            <Button
-                              onClick={() => handleVerify(seller, true)}
-                              disabled={isVerifying || verifyingSeller === seller}
-                              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm rounded-lg disabled:opacity-50"
-                            >
-                              {verifyingSeller === seller ? "Verifying..." : "✓ Verify"}
-                            </Button>
-                            <Button
-                              onClick={() => handleVerify(seller, false)}
-                              disabled={isVerifying || verifyingSeller === seller}
-                              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm rounded-lg disabled:opacity-50"
-                            >
-                              {verifyingSeller === seller ? "Rejecting..." : "✗ Reject"}
-                            </Button>
+                          <div className="flex items-center space-x-2">
+                            <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
+                              ✅ Verified
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              Auto-verified after proof submission
+                            </span>
                           </div>
                         ) : seller.toLowerCase() === userContract?.toLowerCase() ? (
                           <div className="flex items-center space-x-2">
@@ -323,7 +342,7 @@ export default function PoolDetailPage() {
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 sticky top-8">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
               
-              {!isCreator && !isSeller && (
+              {!isCreator && !hasJoined && (
                 <Button
                   onClick={handleJoinPool}
                   disabled={isJoining}
@@ -334,12 +353,12 @@ export default function PoolDetailPage() {
               )}
 
               {isSeller && !isCreator && (
-                <Link
-                  href={`/pools/${poolAddress}/verify`}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold mb-4 text-center block"
+                <Button
+                  onClick={handleSubmitAndVerify}
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold mb-4"
                 >
-                  Submit Proofs
-                </Link>
+                  Submit & Verify
+                </Button>
               )}
 
               {isCreator && (
@@ -348,10 +367,10 @@ export default function PoolDetailPage() {
                     👑 Your Pool
                   </div>
                   <div className="text-sm text-gray-600">
-                    As the creator, you can verify sellers and manage the pool.
+                    As the creator, you can view verified sellers in your pool.
                   </div>
                   <div className="text-sm text-gray-500">
-                    Use the seller list to verify or reject sellers.
+                    Sellers are automatically verified after they complete their proof submissions.
                   </div>
                 </div>
               )}
@@ -366,6 +385,14 @@ export default function PoolDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Verification Modal */}
+      <VerificationModal
+        isOpen={isVerificationModalOpen}
+        onClose={() => setIsVerificationModalOpen(false)}
+        poolAddress={poolAddress}
+        proofRequirements={poolInfo?.proofRequirements || []}
+      />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import VerificationModal from "@/components/verification-modal";
 
 interface PoolCardProps {
   poolAddress: string;
@@ -20,20 +21,28 @@ export function PoolCard({ poolAddress, onJoin, onBuy, onViewDetails }: PoolCard
   const { poolInfo, verifiedSellersCount, totalSellers, sellers, isLoading, error } = usePoolDetails(poolAddress);
   const { userContract, address: userEOA } = useUser();
   const { joinPool, isLoading: isJoining, isSuccess: joinedSuccessfully } = useJoinPool();
-  const { hasJoined, isFullyVerified, isLoading: statusLoading } = useUserPoolStatus(poolAddress, userContract);
+  const { hasJoined: contractHasJoined, isFullyVerified, isLoading: statusLoading, refetch } = useUserPoolStatus(poolAddress, userContract);
   const [isJoiningPool, setIsJoiningPool] = useState(false);
   const [justJoined, setJustJoined] = useState(false);
+  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
+  const [localHasJoined, setLocalHasJoined] = useState(false);
+  
+  // Use contract state or local state (for immediate updates)
+  const hasJoined = contractHasJoined || localHasJoined;
   const router = useRouter();
 
   // Show success message when joined and update local state
   useEffect(() => {
     if (joinedSuccessfully && !justJoined) {
       setJustJoined(true);
+      setLocalHasJoined(true); // Immediately update local state
+      // Manually refetch the user status after joining
       setTimeout(() => {
+        refetch();
         alert("Successfully joined the pool! You can now submit data.");
       }, 1000);
     }
-  }, [joinedSuccessfully, justJoined]);
+  }, [joinedSuccessfully, justJoined, refetch]);
 
   const formatEther = (wei: bigint) => {
     return Number(wei) / 1e18;
@@ -52,17 +61,20 @@ export function PoolCard({ poolAddress, onJoin, onBuy, onViewDetails }: PoolCard
                     poolInfo?.creator?.toLowerCase() === userEOA?.toLowerCase();
   const isSeller = hasJoined; // Use contract state instead of local state
   
-  // Debug logging (commented out for production)
-  // console.log("Pool Card Debug:", {
-  //   poolAddress,
-  //   userContract,
-  //   userEOA,
-  //   creator: poolInfo?.creator,
-  //   isCreator,
-  //   isSeller,
-  //   sellers,
-  //   hasJoined
-  // });
+  // Debug logging
+  console.log("Pool Card Debug:", {
+    poolAddress,
+    userContract,
+    userEOA,
+    creator: poolInfo?.creator,
+    isCreator,
+    isSeller,
+    sellers,
+    hasJoined,
+    contractHasJoined,
+    localHasJoined,
+    joinedSuccessfully
+  });
 
   const handleJoinPool = async () => {
     if (!userContract) {
@@ -89,6 +101,21 @@ export function PoolCard({ poolAddress, onJoin, onBuy, onViewDetails }: PoolCard
 
   const handleViewDetails = () => {
     router.push(`/pools/${poolAddress}`);
+  };
+
+  const handleSubmitAndVerify = () => {
+    // Check if pool has age or nationality proof requirements
+    const hasAgeOrNationality = poolInfo?.proofRequirements?.some(
+      (req: any) => req.proofType === 0 || req.proofType === 1 // 0 = age, 1 = nationality
+    );
+    
+    if (hasAgeOrNationality) {
+      // Redirect to Self page for verification
+      router.push('/self');
+    } else {
+      // Show verification modal for other proof types
+      setIsVerificationModalOpen(true);
+    }
   };
 
   // Early returns after all hooks
@@ -193,8 +220,8 @@ export function PoolCard({ poolAddress, onJoin, onBuy, onViewDetails }: PoolCard
           </div>
         )}
         
-        {/* Join Pool for non-creators */}
-        {!isCreator && !isSeller && (
+        {/* Join Pool for non-creators - ONLY if not joined */}
+        {!isCreator && !hasJoined && (
           <Button
             onClick={handleJoinPool}
             disabled={isJoiningPool || isJoining}
@@ -213,14 +240,22 @@ export function PoolCard({ poolAddress, onJoin, onBuy, onViewDetails }: PoolCard
 
         {/* Seller Actions */}
         {isSeller && !isCreator && (
-          <Link
-            href={`/pools/${poolAddress}/verify`}
-            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors duration-200 text-center"
+          <Button
+            onClick={handleSubmitAndVerify}
+            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors duration-200"
           >
-            Submit Proofs
-          </Link>
+            Submit & Verify
+          </Button>
         )}
       </div>
+
+      {/* Verification Modal */}
+      <VerificationModal
+        isOpen={isVerificationModalOpen}
+        onClose={() => setIsVerificationModalOpen(false)}
+        poolAddress={poolAddress}
+        proofRequirements={poolInfo?.proofRequirements || []}
+      />
     </div>
   );
 }
