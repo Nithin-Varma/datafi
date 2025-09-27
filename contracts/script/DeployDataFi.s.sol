@@ -17,18 +17,18 @@ contract DeployDataFi is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // Deploy UserFactory
-        UserFactory userFactory = new UserFactory();
-        console.log("UserFactory deployed at:", address(userFactory));
-
-        // Deploy PoolFactory
+        // Deploy PoolFactory first
         PoolFactory poolFactory = new PoolFactory();
         console.log("PoolFactory deployed at:", address(poolFactory));
+
+        // Deploy UserFactory with PoolFactory address
+        UserFactory userFactory = new UserFactory(address(poolFactory));
+        console.log("UserFactory deployed at:", address(userFactory));
 
         vm.stopBroadcast();
 
         console.log("Deployment completed!");
-        console.log("UserFactory address:", address(userFactory));
         console.log("PoolFactory address:", address(poolFactory));
+        console.log("UserFactory address:", address(userFactory));
     }
 }

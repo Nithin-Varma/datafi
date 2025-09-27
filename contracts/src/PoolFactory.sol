@@ -2,28 +2,12 @@
 pragma solidity ^0.8.13;
 
 import "./Pool.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract PoolFactory is Ownable, ReentrancyGuard {
-    uint256 public poolCreationFee = 0;
-    
+contract PoolFactory {
     address[] public allPools;
-    
     mapping(address => address[]) public creatorPools;
-    
-    uint256 public totalFeesCollected;
-    
-    event PoolCreated(
-        address indexed creator,
-        address indexed poolAddress,
-        string name,
-        string dataType,
-        uint256 pricePerData
-    );
-    event PoolCreationFeeUpdated(uint256 newFee);
 
-    constructor() Ownable(msg.sender) {}
+    event PoolCreated(address indexed creator, address indexed poolAddress, string name);
 
     function createPool(
         string memory _name,
@@ -32,7 +16,7 @@ contract PoolFactory is Ownable, ReentrancyGuard {
         uint256 _pricePerData,
         uint256 _totalBudget,
         uint256 _deadline
-    ) external payable nonReentrant returns (address) {
+    ) external returns (address) {
         require(_pricePerData > 0, "Price must be greater than 0");
         require(_totalBudget > 0, "Budget must be greater than 0");
         require(_deadline > block.timestamp, "Deadline must be in future");
@@ -43,25 +27,15 @@ contract PoolFactory is Ownable, ReentrancyGuard {
             _dataType,
             _pricePerData,
             _totalBudget,
-            _deadline
+            _deadline,
+            msg.sender
         );
         
         address poolAddress = address(newPool);
-        
-        newPool.transferOwnership(msg.sender);
-        
         allPools.push(poolAddress);
         creatorPools[msg.sender].push(poolAddress);
         
-        
-        emit PoolCreated(
-            msg.sender,
-            poolAddress,
-            _name,
-            _dataType,
-            _pricePerData
-        );
-        
+        emit PoolCreated(msg.sender, poolAddress, _name);
         return poolAddress;
     }
 
@@ -119,26 +93,4 @@ contract PoolFactory is Ownable, ReentrancyGuard {
         
         return result;
     }
-
-    function setPoolCreationFee(uint256 _newFee) external onlyOwner {
-        poolCreationFee = _newFee;
-        emit PoolCreationFeeUpdated(_newFee);
-    }
-
-    function withdrawFees() external onlyOwner nonReentrant {
-        uint256 balance = address(this).balance;
-        require(balance > 0, "No fees to withdraw");
-        
-        payable(owner()).transfer(balance);
-    }
-
-    function getPoolCreationFee() external view returns (uint256) {
-        return poolCreationFee;
-    }
-
-    function getTotalFeesCollected() external view returns (uint256) {
-        return totalFeesCollected;
-    }
-
-    receive() external payable {}
 }
