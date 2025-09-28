@@ -74,7 +74,7 @@ export function useCreatorPools(creatorAddress: string) {
     address: CONTRACT_ADDRESSES.POOL_FACTORY as `0x${string}`,
     abi: POOL_FACTORY_ABI,
     functionName: "getCreatorPools",
-    args: [creatorAddress],
+    args: [creatorAddress as `0x${string}`],
   });
 
   return {

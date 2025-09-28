@@ -17,57 +17,13 @@ export interface VerificationResult {
   proofHash?: string;
   lighthouseCID?: string; // Add Lighthouse CID
   error?: string;
+  redirectTo?: string; // Signal for UI redirect
+  poolAddress?: string;
+  poolCreatorAddress?: string;
 }
 
 class DataFiVerificationService {
 
-  /**
-   * Complete ZK Email verification flow with Lighthouse encryption
-   */
-  async processZKEmailVerification(
-    poolAddress: string,
-    userAddress: string,
-    emlContent: string,
-    verificationType: 'hackerhouse' | 'netflix' = 'hackerhouse'
-  ): Promise<VerificationResult> {
-    try {
-      console.log("🔄 Processing ZK Email verification...");
-
-      // 1. Verify email using ZK email service
-      const emailVerification = await zkEmailService.verifyEmail(emlContent, verificationType);
-      
-      if (!emailVerification.isValid) {
-        throw new Error("Email verification failed");
-      }
-
-      // 2. The ZK email service already stores to Lighthouse and returns CID
-      const lighthouseCID = emailVerification.lighthouseCID;
-      
-      if (!lighthouseCID) {
-        throw new Error("Failed to store verification data to Lighthouse");
-      }
-
-      // 3. Generate proof hash for smart contract
-      const proofHash = emailVerification.proofHash;
-
-      console.log("✅ ZK Email verification completed successfully!");
-      console.log("📦 Lighthouse CID:", lighthouseCID);
-      console.log("🔐 Proof Hash:", proofHash);
-
-      return {
-        success: true,
-        lighthouseCID,
-        proofHash,
-      };
-
-    } catch (error) {
-      console.error("❌ ZK Email verification failed:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error"
-      };
-    }
-  }
 
   /**
    * Complete Self verification flow with Lighthouse encryption
@@ -91,11 +47,12 @@ class DataFiVerificationService {
 
       // 2. Encrypt and upload verification data to Lighthouse
       console.log("🔐 Encrypting verification data...");
+      const signedMessage = await this.getSignedMessage(userAddress);
       const encryptionResult = await lighthouseService.encryptAndUpload(
         proofData,
-        poolAddress,
         userAddress,
-        "0x0000000000000000000000000000000000000000" // Placeholder for pool creator
+        signedMessage,
+        "self-verification-data"
       );
 
       // 3. Generate proof hash for smart contract
@@ -126,17 +83,21 @@ class DataFiVerificationService {
    */
   private async getSignedMessage(userAddress: string): Promise<string> {
     try {
-      // In a real implementation, you would prompt the user to sign a message
-      // For now, we'll create a message that the user should sign
-      const message = `Sign this message to authenticate with Lighthouse for DataFi verification.\nAddress: ${userAddress}\nTimestamp: ${Date.now()}`;
-      
-      // TODO: Implement actual message signing with user's wallet
-      // This would typically use wagmi's useSignMessage hook
-      console.log("⚠️ Message signing not implemented yet. Using placeholder signature.");
+      // For service-level operations, we'll create a deterministic message
+      // In components, you should use the useSignMessage hook directly
+      const message = `Sign this message to authenticate with Lighthouse for DataFi verification.
+Address: ${userAddress}
+Timestamp: ${Date.now()}
+Purpose: Data verification and encryption`;
+
+      console.log("📝 Message prepared for signing:", message);
+      console.log("⚠️ Use useSignMessage hook in components to get actual signature");
+
+      // Return placeholder - components should use useSignMessage hook
       return `placeholder-signature-${userAddress}-${Date.now()}`;
     } catch (error) {
-      console.error("Error getting signed message:", error);
-      throw new Error("Failed to get signed message from user");
+      console.error("Error preparing signed message:", error);
+      throw new Error("Failed to prepare signed message for user");
     }
   }
 
@@ -147,7 +108,7 @@ class DataFiVerificationService {
     poolAddress: string,
     userAddress: string,
     emlContent: string,
-    verificationType: 'hackerhouse' | 'netflix' = 'hackerhouse',
+    verificationType: 'registry' | 'hackerhouse' | 'netflix' = 'registry',
     poolCreatorAddress?: string
   ): Promise<VerificationResult> {
     try {
@@ -180,12 +141,33 @@ class DataFiVerificationService {
       // 4. Use the proof hash from ZK Email verification
       const proofHash = emailVerification.proofHash;
 
-      console.log("✅ ZK Email verification completed successfully");
+      console.log("✅ ZK EMAIL VERIFICATION SUMMARY:");
+      console.log("  Success:", true);
+      console.log("  Lighthouse CID:", lighthouseCID);
+      console.log("  Proof Hash:", proofHash);
+      console.log("  Email From:", emailVerification.emailData.from);
+      console.log("  Email Subject:", emailVerification.emailData.subject);
+      console.log("  Verification Type:", verificationType);
+      console.log("  Pool Creator Access:", poolCreatorAddress ? "✅ Granted" : "❌ Not provided");
+
+      // Log data access information
+      if (lighthouseCID) {
+        console.log("📁 DATA ACCESS INFO:");
+        console.log("  Storage URL:", `https://gateway.lighthouse.storage/ipfs/${lighthouseCID}`);
+        console.log("  Owner:", userAddress);
+        if (poolCreatorAddress) {
+          console.log("  Pool Creator can access:", poolCreatorAddress);
+          console.log("  Pool Creator access URL:", `https://gateway.lighthouse.storage/ipfs/${lighthouseCID}`);
+        }
+      }
 
       return {
         success: true,
-        encryptedCID: encryptionResult.encryptedCID,
+        lighthouseCID,
         proofHash,
+        redirectTo: 'pool-owner-dashboard', // Signal to redirect to dashboard
+        poolAddress,
+        poolCreatorAddress,
       };
 
     } catch (error) {
@@ -252,15 +234,17 @@ class DataFiVerificationService {
     poolAddress: string,
     buyerAddress: string,
     sellerAddress: string,
-    encryptedCID: string
+    encryptedCID: string,
+    signedMessage: string
   ): Promise<boolean> {
     try {
       console.log("🔄 Transferring data access to buyer...");
 
-      const accessTransferred = await lighthouseService.transferAccess(
+      const accessTransferred = await lighthouseService.shareWithBuyers(
         encryptedCID,
-        buyerAddress,
-        sellerAddress
+        [buyerAddress],
+        sellerAddress,
+        signedMessage
       );
 
       if (accessTransferred) {

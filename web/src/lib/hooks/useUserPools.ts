@@ -81,8 +81,8 @@ export function useUserFinancialStats(userContractAddress: string) {
   });
 
   return {
-    totalSpent: totalSpent || 0n,
-    totalEarned: totalEarned || 0n,
+    totalSpent: totalSpent || BigInt(0),
+    totalEarned: totalEarned || BigInt(0),
     isLoading: spentLoading || earnedLoading,
     error: spentError || earnedError,
   };

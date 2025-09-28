@@ -109,7 +109,7 @@ export function useUser() {
         abi: USER_FACTORY_ABI,
         functionName: "createUser",
         args: [],
-        value: BigInt(0), // No fee
+        value: undefined, // No fee
       });
     } catch (error) {
       console.error("Error creating user:", error);

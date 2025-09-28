@@ -151,13 +151,10 @@ export function useZkEmailVerification() {
         [file],
         process.env.NEXT_PUBLIC_LIGHTHOUSE_API_KEY || '',
         address || '',
-        undefined, // Use default JWT token
-        async (uploadStatus: any) => {
-          console.log("Upload progress:", uploadStatus);
-        }
+        '' // Use default JWT token
       );
 
-      const cid = uploadResponse.data.Hash;
+      const cid = uploadResponse.data[0].Hash;
 
       // Share access with buyer
       await shareAccessWithBuyer(cid, buyerAddress);
@@ -177,7 +174,7 @@ export function useZkEmailVerification() {
         address || '',
         [buyerAddress],
         cid,
-        undefined // Use default signature method
+        '' // Use default signature method
       );
 
       console.log("Access shared with buyer:", shareResponse);

@@ -2,7 +2,7 @@
 
 import { useReadContract } from "wagmi";
 import { POOL_ABI } from "../config";
-import { useJoinPool, useSubmitData, usePurchaseData, useVerifySeller, useClosePool } from "./usePoolActions";
+import { useJoinPool, useSubmitData, usePurchaseData, useVerifySeller, useClosePool, useSubmitSelfProof, useSubmitZKEmailProof } from "./usePoolActions";
 
 // Hook for managing a specific pool
 export function usePoolManagement(poolAddress: string, userContractAddress?: string) {
@@ -45,6 +45,8 @@ export function usePoolManagement(poolAddress: string, userContractAddress?: str
   const { purchaseData, isLoading: purchasingData, isSuccess: dataPurchased } = usePurchaseData();
   const { verifySeller, isLoading: verifyingSeller, isSuccess: sellerVerified } = useVerifySeller();
   const { closePool, isLoading: closingPool, isSuccess: poolClosed } = useClosePool();
+  const { submitSelfProof, isLoading: submittingSelfProof, isSuccess: selfProofSubmitted } = useSubmitSelfProof();
+  const { submitZKEmailProof, isLoading: submittingZKEmailProof, isSuccess: zkEmailProofSubmitted } = useSubmitZKEmailProof();
 
   return {
     // Pool data
@@ -59,10 +61,16 @@ export function usePoolManagement(poolAddress: string, userContractAddress?: str
     
     // Actions
     joinPool: () => userContractAddress ? joinPool(userContractAddress, poolAddress) : () => { throw new Error("User contract address is required to join pool"); },
-    submitData: (encryptedData: string) => submitData(poolAddress, encryptedData),
-    purchaseData: (value: bigint) => purchaseData(poolAddress, value),
+    submitData: (data: any, userAddress: string, signedMessage: string, poolOwnerAddress?: string) =>
+      submitData(poolAddress, data, userAddress, signedMessage, poolOwnerAddress),
+    purchaseData: (value: bigint, sellerAddress?: string, encryptedCID?: string, buyerAddress?: string, signedMessage?: string) =>
+      purchaseData(poolAddress, value, sellerAddress, encryptedCID, buyerAddress, signedMessage),
     verifySeller: (sellerAddress: string, verified: boolean) => verifySeller(poolAddress, sellerAddress, verified),
     closePool: () => closePool(poolAddress),
+    submitSelfProof: (proofName: string, selfVerificationData: any, userAddress: string, signedMessage: string, poolOwnerAddress?: string) =>
+      userContractAddress ? submitSelfProof(userContractAddress, poolAddress, proofName, selfVerificationData, userAddress, signedMessage, poolOwnerAddress) : () => { throw new Error("User contract address is required"); },
+    submitZKEmailProof: (proofName: string, emlContent: string, verificationType: 'registry' | 'hackerhouse' | 'netflix', userAddress: string, signedMessage: string, poolOwnerAddress?: string) =>
+      userContractAddress ? submitZKEmailProof(userContractAddress, poolAddress, proofName, emlContent, verificationType, userAddress, signedMessage, poolOwnerAddress) : () => { throw new Error("User contract address is required"); },
     
     // Action states
     isJoining: joiningPool,
@@ -70,13 +78,17 @@ export function usePoolManagement(poolAddress: string, userContractAddress?: str
     isPurchasing: purchasingData,
     isVerifying: verifyingSeller,
     isClosing: closingPool,
-    
+    isSubmittingSelfProof: submittingSelfProof,
+    isSubmittingZKEmailProof: submittingZKEmailProof,
+
     // Success states
     hasJoined: joinedPool,
     hasSubmitted: dataSubmitted,
     hasPurchased: dataPurchased,
     hasVerified: sellerVerified,
     hasClosed: poolClosed,
+    hasSelfProofSubmitted: selfProofSubmitted,
+    hasZKEmailProofSubmitted: zkEmailProofSubmitted,
     
     // Helper functions
     getSellerData,
@@ -88,16 +100,16 @@ export function usePoolStats(poolAddress: string) {
   const { poolInfo, sellers, verifiedSellersCount, totalSellers, isLoading, error } = usePoolManagement(poolAddress);
 
   const stats = {
-    totalBudget: poolInfo?.totalBudget || 0n,
-    remainingBudget: poolInfo?.remainingBudget || 0n,
-    pricePerData: poolInfo?.pricePerData || 0n,
+    totalBudget: poolInfo?.totalBudget || BigInt(0),
+    remainingBudget: poolInfo?.remainingBudget || BigInt(0),
+    pricePerData: poolInfo?.pricePerData || BigInt(0),
     totalSellers,
     verifiedSellersCount,
     pendingSellers: totalSellers - verifiedSellersCount,
     isActive: poolInfo?.isActive || false,
     isExpired: poolInfo ? Date.now() / 1000 > Number(poolInfo.deadline) : false,
-    createdAt: poolInfo?.createdAt || 0n,
-    deadline: poolInfo?.deadline || 0n,
+    createdAt: poolInfo?.createdAt || BigInt(0),
+    deadline: poolInfo?.deadline || BigInt(0),
   };
 
   return {

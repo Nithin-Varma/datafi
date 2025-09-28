@@ -261,7 +261,8 @@ export default function PoolVerificationPage() {
     // Wait for both pool data and wallet connection to be established
     if (address && !isSeller && !isLoading && sellers && sellers.length >= 0) {
       console.log("Redirecting: User is not a seller in this pool", { address, isSeller, sellers });
-      router.push(`/pools/${poolAddress}`);
+      // router.push(`/pools/${poolAddress}`);
+
     }
   }, [address, isSeller, isLoading, router, poolAddress, sellers]);
 
@@ -277,7 +278,7 @@ export default function PoolVerificationPage() {
 
     const selfUrl = `/self?pool=${poolAddress}&redirect=${encodeURIComponent(`/pools/${poolAddress}/verify`)}`;
     displayToast("🔄 Redirecting to Self verification...");
-    router.push(selfUrl);
+    // router.push(selfUrl);
   };
 
   const handleZKEmailUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -367,7 +368,7 @@ export default function PoolVerificationPage() {
         
         // Redirect to pools page after successful verification
         setTimeout(() => {
-          router.push('/pools');
+          // router.push('/pools');
         }, 2000); // Wait 2 seconds to show the success message
       } else {
         displayToast(`❌ ${verificationType} verification failed: ${result.error}`);

@@ -1,25 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { ProofOfHuman } from "../src/ProofOfHuman.sol";
+import { DataFiProof } from "../src/DataFiProof.sol";
 import { Script } from "forge-std/Script.sol";
 import { CountryCodes } from "@selfxyz/contracts/contracts/libraries/CountryCode.sol";
 import { console } from "forge-std/console.sol";
 import { SelfUtils } from "@selfxyz/contracts/contracts/libraries/SelfUtils.sol";
 
-/// @title DeployProofOfHuman
-/// @notice Deployment script for ProofOfHuman contract using standard deployment
-contract DeployProofOfHuman is Script {
+/// @title DeployDataFiProof
+/// @notice Deployment script for DataFiProof contract using standard deployment
+contract DeployDataFiProof is Script {
     // Custom errors for deployment verification
     error DeploymentFailed();
 
     /// @notice Main deployment function using standard deployment
-    /// @return proofOfHuman The deployed ProofOfHuman contract instance
+    /// @return dataFiProof The deployed DataFiProof contract instance
     /// @dev Requires the following environment variables:
     ///      - IDENTITY_VERIFICATION_HUB_ADDRESS: Address of the Self Protocol verification hub
-    ///      - SCOPE_SEED: Scope seed value (defaults to "self-workshop")
+    ///      - SCOPE_SEED: Scope seed value (defaults to "datafi-verification")
 
-    function run() public returns (ProofOfHuman proofOfHuman) {
+    function run() public returns (DataFiProof dataFiProof) {
 
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         // address deployer = vm.addr(deployerPrivateKey);
@@ -39,15 +39,15 @@ contract DeployProofOfHuman is Script {
         });
 
         // Deploy the contract using SCOPE_SEED from environment
-        proofOfHuman = new ProofOfHuman(hubAddress, scopeSeed, verificationConfig);
+        dataFiProof = new DataFiProof(hubAddress, scopeSeed, verificationConfig);
 
         // Log deployment information
-        console.log("ProofOfHuman deployed to:", address(proofOfHuman));
+        console.log("DataFiProof deployed to:", address(dataFiProof));
         console.log("Identity Verification Hub:", hubAddress);
-        console.log("Scope Value:", proofOfHuman.scope());
+        console.log("Scope Value:", dataFiProof.scope());
 
         // Verify deployment was successful
-        if (address(proofOfHuman) == address(0)) revert DeploymentFailed();
+        if (address(dataFiProof) == address(0)) revert DeploymentFailed();
 
         console.log("Deployment verification completed successfully!");
         console.log("Scope automatically generated from SCOPE_SEED:", scopeSeed);

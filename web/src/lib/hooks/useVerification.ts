@@ -16,8 +16,8 @@ export function useVerifySeller() {
         address: poolAddress as `0x${string}`,
         abi: POOL_ABI,
         functionName: "verifySeller",
-        args: [sellerAddress, verified],
-        value: 0n,
+        args: [sellerAddress as `0x${string}`, verified],
+        value: undefined,
       });
     } catch (err) {
       console.error("Error verifying seller:", err);
@@ -47,7 +47,7 @@ export function useSubmitVerification() {
         abi: POOL_ABI,
         functionName: "submitData",
         args: [encryptedData],
-        value: 0n,
+        value: undefined,
       });
     } catch (err) {
       console.error("Error submitting verification:", err);
