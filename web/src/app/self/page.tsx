@@ -162,51 +162,34 @@ export default function Home() {
           nationality: true,
           date_of_birth: true,
           issuing_state: true
-        }
+        },
+        timestamp: new Date().toISOString(),
+        type: 'self_verification'
       };
 
-      displayToast("🔐 Encrypting and storing verification data...");
+      displayToast("💾 Saving Self verification data locally...");
 
-      // Import the verification service
-      const { verificationService } = await import('@/lib/verification-service');
+      // Store the verification result in localStorage for later use (don't encrypt yet)
+      const result = {
+        success: true,
+        type: 'self_verification',
+        data: selfVerificationData,
+        proofHash: '0x' + Buffer.from(JSON.stringify(selfVerificationData)).toString('hex').substring(0, 64),
+        completedAt: new Date().toISOString()
+      };
 
-      // Get the current pool address from URL params or context
+      localStorage.setItem('selfVerificationResult', JSON.stringify(result));
+
+      displayToast("✅ Self verification completed! Continue with next verification step.");
+
+      // Check for redirect URL parameter
       const urlParams = new URLSearchParams(window.location.search);
-      const poolAddress = urlParams.get('pool') || localStorage.getItem('currentPoolAddress');
+      const redirectUrl = urlParams.get('redirect');
+      const targetUrl = redirectUrl ? decodeURIComponent(redirectUrl) : "/dashboard";
 
-      if (!poolAddress) {
-        displayToast("❌ No pool selected. Please join a pool first.");
-        setTimeout(() => {
-          router.push("/dashboard");
-        }, 1500);
-        return;
-      }
-
-      // Process Self verification with Lighthouse encryption
-      const result = await verificationService.processSelfVerification(
-        poolAddress,
-        address as string,
-        selfVerificationData
-      );
-
-      if (result.success) {
-        displayToast("🎉 Verification data encrypted and stored successfully!");
-        console.log("Encrypted CID:", result.encryptedCID);
-        console.log("Proof Hash:", result.proofHash);
-
-        // Store the verification result in localStorage for later use
-        localStorage.setItem('selfVerificationResult', JSON.stringify(result));
-
-        // Check for redirect URL parameter
-        const redirectUrl = urlParams.get('redirect');
-        const targetUrl = redirectUrl ? decodeURIComponent(redirectUrl) : "/dashboard";
-
-        setTimeout(() => {
-          router.push(targetUrl);
-        }, 2000);
-      } else {
-        displayToast("❌ Failed to store verification data: " + result.error);
-      }
+      setTimeout(() => {
+        router.push(targetUrl);
+      }, 1500);
 
     } catch (error) {
       console.error("Verification processing error:", error);
