@@ -77,7 +77,7 @@ export default function FlowDemo() {
           <ul className="text-yellow-800 space-y-1 text-sm">
             <li>• Add your Lighthouse API key to .env.local</li>
             <li>• Deploy updated contracts with new payment logic</li>
-            <li>• Have a .eml file with "zk-verify" and "hackerhouse" keywords</li>
+            <li>• Have a .eml file with &quot;zk-verify&quot; and &quot;hackerhouse&quot; keywords</li>
           </ul>
         </div>
 

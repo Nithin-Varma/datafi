@@ -391,7 +391,7 @@ export default function PoolDetailPage() {
         isOpen={isVerificationModalOpen}
         onClose={() => setIsVerificationModalOpen(false)}
         poolAddress={poolAddress}
-        proofRequirements={poolInfo?.proofRequirements || []}
+        proofRequirements={poolInfo?.proofRequirements ? [...poolInfo.proofRequirements] : []}
       />
     </div>
   );

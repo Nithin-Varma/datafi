@@ -21,6 +21,7 @@ export default function Home() {
   const [selfApp, setSelfApp] = useState<SelfApp | null>(null);
   const [universalLink, setUniversalLink] = useState("");
   const [verificationStatus, setVerificationStatus] = useState<'idle' | 'mobile_connected' | 'verifying' | 'verified'>('idle');
+  const [isLoading, setIsLoading] = useState(false);
   const { address } = useAccount();
   // Use useMemo to cache the array to avoid creating a new array on each render
   const excludedCountries = useMemo(() => [countries.UNITED_STATES], []);
@@ -35,8 +36,15 @@ export default function Home() {
 
       if (message.includes('[WebSocket] Mobile device connected')) {
         setVerificationStatus('mobile_connected');
+        setIsLoading(true);
         displayToast("📱 Mobile device connected!");
+        // Start verification process
+        setTimeout(() => {
+          setVerificationStatus('verifying');
+          displayToast("🔍 Verifying your identity...");
+        }, 1000);
       } else if (message.includes('[WebSocket] Received mobile status: proof_verified')) {
+        setIsLoading(false);
         setVerificationStatus('verified');
         displayToast("✅ Verification successful!");
       }
@@ -124,26 +132,112 @@ export default function Home() {
 
   const handleMobileConnected = () => {
     setVerificationStatus('mobile_connected');
+    setIsLoading(true);
     displayToast("📱 Mobile device connected!");
+    // Start verification process
+    setTimeout(() => {
+      setVerificationStatus('verifying');
+      displayToast("🔍 Verifying your identity...");
+    }, 1000);
   };
 
   const handleVerifying = () => {
     setVerificationStatus('verifying');
+    setIsLoading(true);
     displayToast("🔍 Verifying your identity...");
   };
 
-  const handleSuccessfulVerification = () => {
+  const handleSuccessfulVerification = async () => {
+    setIsLoading(false);
     setVerificationStatus('verified');
     displayToast("✅ Verification successful!");
-    setTimeout(() => {
-      router.push("/dashboard");
-    }, 1500);
+
+    try {
+      // Get Self verification data (you'll need to extract this from the verification process)
+      const selfVerificationData = {
+        userId: address,
+        sessionId: Date.now().toString(),
+        disclosures: {
+          minimumAge: 18,
+          nationality: true,
+          date_of_birth: true,
+          issuing_state: true
+        }
+      };
+
+      displayToast("🔐 Encrypting and storing verification data...");
+
+      // Import the verification service
+      const { verificationService } = await import('@/lib/verification-service');
+
+      // Get the current pool address from URL params or context
+      const urlParams = new URLSearchParams(window.location.search);
+      const poolAddress = urlParams.get('pool') || localStorage.getItem('currentPoolAddress');
+
+      if (!poolAddress) {
+        displayToast("❌ No pool selected. Please join a pool first.");
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 1500);
+        return;
+      }
+
+      // Process Self verification with Lighthouse encryption
+      const result = await verificationService.processSelfVerification(
+        poolAddress,
+        address as string,
+        selfVerificationData
+      );
+
+      if (result.success) {
+        displayToast("🎉 Verification data encrypted and stored successfully!");
+        console.log("Encrypted CID:", result.encryptedCID);
+        console.log("Proof Hash:", result.proofHash);
+
+        // Store the verification result in localStorage for later use
+        localStorage.setItem('selfVerificationResult', JSON.stringify(result));
+
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 2000);
+      } else {
+        displayToast("❌ Failed to store verification data: " + result.error);
+      }
+
+    } catch (error) {
+      console.error("Verification processing error:", error);
+      displayToast("❌ Error processing verification");
+
+      // Still redirect to dashboard after a delay
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 1500);
+    }
   };
 
   return (
-    <div className="min-h-screen w-full bg-gray-50 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8">
-      {/* Header */}
-      <div className="mb-6 md:mb-8 text-center">
+    <div className="min-h-screen w-full bg-gray-50 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 relative">
+      {/* Loading Overlay with Blur */}
+      {isLoading && (
+        <div className="absolute inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-8 shadow-2xl text-center max-w-sm mx-4">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 border-t-blue-600 mx-auto mb-4"></div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              {verificationStatus === 'mobile_connected' ? 'Processing Connection...' : 'Verifying Identity...'}
+            </h3>
+            <p className="text-gray-600">
+              {verificationStatus === 'mobile_connected'
+                ? 'Setting up secure connection with your mobile device'
+                : 'Please wait while we verify your identity using Self Protocol'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className={`w-full ${isLoading ? 'pointer-events-none' : ''}`}>
+        {/* Header */}
+        <div className="mb-6 md:mb-8 text-center">
         <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-800">
           {process.env.NEXT_PUBLIC_SELF_APP_NAME || "Self Workshop"}
         </h1>
@@ -217,6 +311,7 @@ export default function Home() {
             {toastMessage}
           </div>
         )}
+        </div>
       </div>
     </div>
   );

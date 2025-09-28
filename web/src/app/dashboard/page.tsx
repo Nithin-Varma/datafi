@@ -155,7 +155,7 @@ export default function Dashboard() {
                 ) : (
                   <div className="text-center py-8">
                     <div className="text-4xl mb-4">📊</div>
-                    <p className="text-gray-600 mb-4">You haven't created any pools yet</p>
+                    <p className="text-gray-600 mb-4">You haven&apos;t created any pools yet</p>
                     <Link href="/pools" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
                       Create Pool
                     </Link>
@@ -184,7 +184,7 @@ export default function Dashboard() {
                 ) : (
                   <div className="text-center py-8">
                     <div className="text-4xl mb-4">🤝</div>
-                    <p className="text-gray-600 mb-4">You haven't joined any pools yet</p>
+                    <p className="text-gray-600 mb-4">You haven&apos;t joined any pools yet</p>
                     <Link href="/pools" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
                       Browse Pools
                     </Link>

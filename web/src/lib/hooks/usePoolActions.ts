@@ -62,7 +62,7 @@ export function useJoinPool() {
         abi: USER_ABI,
         functionName: "joinPool",
         args: [poolAddress as `0x${string}`],
-        value: 0n,
+        value: undefined,
       });
     } catch (err) {
       console.error("Error joining pool:", err);
@@ -92,7 +92,7 @@ export function useSubmitData() {
         abi: POOL_ABI,
         functionName: "submitData",
         args: [encryptedData],
-        value: BigInt(0),
+        value: undefined,
       });
     } catch (err) {
       console.error("Error submitting data:", err);
@@ -152,7 +152,7 @@ export function useVerifySeller() {
         abi: POOL_ABI,
         functionName: "verifySeller",
         args: [sellerAddress as `0x${string}`, verified],
-        value: 0n,
+        value: undefined,
       });
     } catch (err) {
       console.error("Error verifying seller:", err);
@@ -182,7 +182,7 @@ export function useClosePool() {
         abi: POOL_ABI,
         functionName: "closePool",
         args: [],
-        value: 0n,
+        value: undefined,
       });
     } catch (err) {
       console.error("Error closing pool:", err);

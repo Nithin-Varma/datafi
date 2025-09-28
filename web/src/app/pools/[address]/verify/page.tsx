@@ -22,7 +22,7 @@ export default function PoolVerificationPage() {
   const [proofData, setProofData] = useState<{[key: string]: string}>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isSeller = sellers?.includes(userContract || "");
+  const isSeller = sellers?.includes(userContract as `0x${string}` || "0x" as `0x${string}`);
 
   useEffect(() => {
     if (!isSeller && !isLoading) {

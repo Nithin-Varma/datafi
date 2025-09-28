@@ -1,7 +1,7 @@
-// Contract addresses for Base Sepolia - Updated with proper verification logic
+// Contract addresses for Base Sepolia - Latest deployment after optimization
 export const CONTRACT_ADDRESSES = {
-  USER_FACTORY: "0xc3D0b9befd1aD95E023E38D4265A6b81816ca675", // Updated with proper verification logic
-  POOL_FACTORY: "0x04eb5EA0980B921d284e2759Acf23dAcEB9CeF1a", // Updated with proper verification logic
+  USER_FACTORY: "0x24d2984B02dEE7A0B0919247cB3605cd8f3EA9E0", // Optimized deployment
+  POOL_FACTORY: "0x41E78bEA13b5428f2b0b5c67BAdFA8B46Af6DebC", // Optimized deployment
 } as const;
 
 // WalletConnect Project ID - Get from https://cloud.walletconnect.com/

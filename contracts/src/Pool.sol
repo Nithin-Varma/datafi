@@ -22,6 +22,14 @@ contract Pool {
         bool isRequired;
     }
 
+    struct VerifiedData {
+        string encryptedCID;        // Lighthouse encrypted CID
+        bytes32 accessCondition;    // Access control hash for Lighthouse
+        bool isEncrypted;          // Whether data is encrypted and stored
+        bool isAccessTransferred;   // Whether access was given to buyer
+        uint256 timestamp;         // Data storage timestamp
+    }
+
     struct PoolInfo {
         string name;
         string description;
@@ -45,6 +53,8 @@ contract Pool {
     mapping(address => bool) public userFullyVerified; // Track if user has all required proofs
     mapping(address => mapping(string => bytes32)) public userProofHashes; // Track unique proof hashes per user
     mapping(bytes32 => bool) public globalProofHashes; // Track global proof hashes to prevent duplicates
+    mapping(address => VerifiedData) public verifiedUserData; // Lighthouse encrypted data for each user
+    mapping(address => string[]) public buyerAccessibleCIDs; // CIDs buyer can access
     uint256 public totalDataCollected;
 
     event PoolCreated(string name, string dataType, uint256 pricePerData, uint256 totalBudget);
@@ -52,6 +62,8 @@ contract Pool {
     event DataPurchased(address indexed buyer, uint256 amount, uint256 dataCount);
     event ProofSubmitted(address indexed seller, string proofName, bool verified);
     event SellerFullyVerified(address indexed seller);
+    event DataEncrypted(address indexed seller, string encryptedCID);
+    event AccessTransferred(address indexed buyer, address indexed seller, string encryptedCID);
 
     constructor(
         string memory _name,
@@ -80,13 +92,6 @@ contract Pool {
         emit PoolCreated(_name, _dataType, _pricePerData, _totalBudget);
     }
 
-    function joinPool() external {
-        require(msg.sender != poolInfo.creator && poolInfo.isActive && !userJoined[msg.sender], "Invalid");
-        userJoined[msg.sender] = true;
-        joinedSellers.push(msg.sender);
-        emit SellerJoined(msg.sender);
-    }
-
     function joinPoolBySender(address _sender) external {
         require(_sender != poolInfo.creator && poolInfo.isActive && !userJoined[_sender], "Invalid");
         userJoined[_sender] = true;
@@ -94,45 +99,9 @@ contract Pool {
         emit SellerJoined(_sender);
     }
 
-    function submitProof(string memory _proofName, bytes32 _proofHash) external {
-        require(poolInfo.isActive && userJoined[msg.sender] && !userFullyVerified[msg.sender], "Invalid");
-        require(!userProofs[msg.sender][_proofName], "Already submitted");
-
-        // Check if this proof is required for the pool
-        bool isRequiredProof = false;
-        for (uint256 i = 0; i < poolInfo.proofRequirements.length; i++) {
-            if (keccak256(bytes(poolInfo.proofRequirements[i].name)) == keccak256(bytes(_proofName))) {
-                isRequiredProof = true;
-                break;
-            }
-        }
-        require(isRequiredProof, "Proof not required");
-
-        // Generate unique proof hash to prevent reuse
-        bytes32 uniqueProofHash = keccak256(abi.encodePacked(msg.sender, _proofName, _proofHash, address(this)));
-        require(!globalProofHashes[uniqueProofHash], "Proof already used");
-
-        userProofs[msg.sender][_proofName] = true;
-        userProofHashes[msg.sender][_proofName] = uniqueProofHash;
-        globalProofHashes[uniqueProofHash] = true;
-
-        emit ProofSubmitted(msg.sender, _proofName, true);
-        _checkFullVerification(msg.sender);
-    }
-
     function submitProofBySender(address _sender, string memory _proofName, bytes32 _proofHash) external {
         require(poolInfo.isActive && userJoined[_sender] && !userFullyVerified[_sender], "Invalid");
         require(!userProofs[_sender][_proofName], "Already submitted");
-
-        // Check if this proof is required for the pool
-        bool isRequiredProof = false;
-        for (uint256 i = 0; i < poolInfo.proofRequirements.length; i++) {
-            if (keccak256(bytes(poolInfo.proofRequirements[i].name)) == keccak256(bytes(_proofName))) {
-                isRequiredProof = true;
-                break;
-            }
-        }
-        require(isRequiredProof, "Proof not required");
 
         // Generate unique proof hash to prevent reuse
         bytes32 uniqueProofHash = keccak256(abi.encodePacked(_sender, _proofName, _proofHash, address(this)));
@@ -146,51 +115,9 @@ contract Pool {
         _checkFullVerification(_sender);
     }
 
-    function submitSelfProof(string memory _proofName, bytes32 _selfProofHash) external {
-        require(poolInfo.isActive && userJoined[msg.sender] && !userFullyVerified[msg.sender], "Invalid");
-        require(!userProofs[msg.sender][_proofName], "Already submitted");
-
-        // Check if this is a Self proof type
-        bool isSelfProofType = false;
-        for (uint256 i = 0; i < poolInfo.proofRequirements.length; i++) {
-            if (keccak256(bytes(poolInfo.proofRequirements[i].name)) == keccak256(bytes(_proofName))) {
-                ProofType proofType = poolInfo.proofRequirements[i].proofType;
-                if (proofType == ProofType.SELF_AGE_VERIFICATION || proofType == ProofType.SELF_NATIONALITY) {
-                    isSelfProofType = true;
-                    break;
-                }
-            }
-        }
-        require(isSelfProofType, "Not a Self proof");
-
-        // Generate unique proof hash for Self proofs
-        bytes32 uniqueProofHash = keccak256(abi.encodePacked(msg.sender, _proofName, _selfProofHash, address(this)));
-        require(!globalProofHashes[uniqueProofHash], "Proof already used");
-
-        userProofs[msg.sender][_proofName] = true;
-        userProofHashes[msg.sender][_proofName] = uniqueProofHash;
-        globalProofHashes[uniqueProofHash] = true;
-
-        emit ProofSubmitted(msg.sender, _proofName, true);
-        _checkFullVerification(msg.sender);
-    }
-
     function submitSelfProofBySender(address _sender, string memory _proofName, bytes32 _selfProofHash) external {
         require(poolInfo.isActive && userJoined[_sender] && !userFullyVerified[_sender], "Invalid");
         require(!userProofs[_sender][_proofName], "Already submitted");
-
-        // Check if this is a Self proof type
-        bool isSelfProofType = false;
-        for (uint256 i = 0; i < poolInfo.proofRequirements.length; i++) {
-            if (keccak256(bytes(poolInfo.proofRequirements[i].name)) == keccak256(bytes(_proofName))) {
-                ProofType proofType = poolInfo.proofRequirements[i].proofType;
-                if (proofType == ProofType.SELF_AGE_VERIFICATION || proofType == ProofType.SELF_NATIONALITY) {
-                    isSelfProofType = true;
-                    break;
-                }
-            }
-        }
-        require(isSelfProofType, "Not a Self proof");
 
         // Generate unique proof hash for Self proofs
         bytes32 uniqueProofHash = keccak256(abi.encodePacked(_sender, _proofName, _selfProofHash, address(this)));
@@ -204,33 +131,50 @@ contract Pool {
         _checkFullVerification(_sender);
     }
 
-    function verifySeller(address _seller, bool _verified, bytes32 _proof) external {
+    function verifySeller(address _seller, bool _verified, bytes32) external {
         require(msg.sender == poolInfo.creator && poolInfo.isActive, "Access denied");
         userVerified[_seller] = _verified;
         verifiedSellers.push(_seller);
     }
 
     function _checkFullVerification(address _seller) internal {
-        // Check if user has all required proofs
-        bool hasAllProofs = true;
-        for (uint256 i = 0; i < poolInfo.proofRequirements.length; i++) {
-            if (poolInfo.proofRequirements[i].isRequired &&
-                !userProofs[_seller][poolInfo.proofRequirements[i].name]) {
-                hasAllProofs = false;
-                break;
-            }
-        }
-
-        if (hasAllProofs && !userFullyVerified[_seller]) {
+        if (!userFullyVerified[_seller]) {
             userFullyVerified[_seller] = true;
             if (!userVerified[_seller]) {
                 userVerified[_seller] = true;
                 verifiedSellers.push(_seller);
             }
             emit SellerFullyVerified(_seller);
-
-            // Automatically transfer payment to verified seller
             _transferPaymentToSeller(_seller);
+        }
+    }
+
+    function storeEncryptedData(string memory _encryptedCID, bytes32 _accessCondition) external {
+        require(userFullyVerified[msg.sender], "User not fully verified");
+        require(bytes(verifiedUserData[msg.sender].encryptedCID).length == 0, "Data already stored");
+
+        verifiedUserData[msg.sender] = VerifiedData({
+            encryptedCID: _encryptedCID,
+            accessCondition: _accessCondition,
+            isEncrypted: true,
+            isAccessTransferred: false,
+            timestamp: block.timestamp
+        });
+
+        emit DataEncrypted(msg.sender, _encryptedCID);
+    }
+
+    function transferAccessToBuyer() external {
+        require(msg.sender == poolInfo.creator, "Only creator can transfer access");
+
+        // Transfer access to all verified sellers' data
+        for (uint256 i = 0; i < verifiedSellers.length; i++) {
+            address seller = verifiedSellers[i];
+            if (verifiedUserData[seller].isEncrypted && !verifiedUserData[seller].isAccessTransferred) {
+                verifiedUserData[seller].isAccessTransferred = true;
+                buyerAccessibleCIDs[poolInfo.creator].push(verifiedUserData[seller].encryptedCID);
+                emit AccessTransferred(poolInfo.creator, seller, verifiedUserData[seller].encryptedCID);
+            }
         }
     }
 
@@ -241,6 +185,13 @@ contract Pool {
             (bool success, ) = payable(_seller).call{value: poolInfo.pricePerData}("");
             require(success, "Payment failed");
             emit DataPurchased(poolInfo.creator, poolInfo.pricePerData, 1);
+
+            // Auto-transfer access if data is encrypted
+            if (verifiedUserData[_seller].isEncrypted && !verifiedUserData[_seller].isAccessTransferred) {
+                verifiedUserData[_seller].isAccessTransferred = true;
+                buyerAccessibleCIDs[poolInfo.creator].push(verifiedUserData[_seller].encryptedCID);
+                emit AccessTransferred(poolInfo.creator, _seller, verifiedUserData[_seller].encryptedCID);
+            }
         }
     }
 
@@ -290,6 +241,22 @@ contract Pool {
 
     function getVerifiedSellersCount() external view returns (uint256) {
         return verifiedSellers.length;
+    }
+
+    function getVerifiedUserData(address _user) external view returns (VerifiedData memory) {
+        return verifiedUserData[_user];
+    }
+
+    function getBuyerAccessibleCIDs(address _buyer) external view returns (string[] memory) {
+        return buyerAccessibleCIDs[_buyer];
+    }
+
+    function isDataEncrypted(address _user) external view returns (bool) {
+        return verifiedUserData[_user].isEncrypted;
+    }
+
+    function isAccessTransferred(address _user) external view returns (bool) {
+        return verifiedUserData[_user].isAccessTransferred;
     }
 
     receive() external payable {}

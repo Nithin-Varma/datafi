@@ -254,7 +254,7 @@ export function PoolCard({ poolAddress, onJoin, onBuy, onViewDetails }: PoolCard
         isOpen={isVerificationModalOpen}
         onClose={() => setIsVerificationModalOpen(false)}
         poolAddress={poolAddress}
-        proofRequirements={poolInfo?.proofRequirements || []}
+        proofRequirements={poolInfo?.proofRequirements ? [...poolInfo.proofRequirements] : []}
       />
     </div>
   );

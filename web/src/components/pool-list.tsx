@@ -95,7 +95,7 @@ export function PoolList() {
               {allPools.length === 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
                   <p className="text-blue-800 text-sm">
-                    💡 <strong>Tip:</strong> Switch to the "Create New Pool" tab to create your first data pool!
+                    💡 <strong>Tip:</strong> Switch to the &quot;Create New Pool&quot; tab to create your first data pool!
                   </p>
                 </div>
               )}

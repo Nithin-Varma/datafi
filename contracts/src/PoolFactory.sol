@@ -26,7 +26,6 @@ contract PoolFactory {
     ) external payable returns (address) {
         if (_pricePerData == 0) revert InvalidPrice();
         if (_totalBudget == 0) revert InvalidBudget();
-        if (_deadline <= block.timestamp) revert InvalidDeadline();
         
         Pool newPool = new Pool(
             _name,
