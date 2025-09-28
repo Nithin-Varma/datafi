@@ -169,6 +169,7 @@ export function useVerifySeller() {
 }
 
 // Hook for closing a pool (only pool creator can do this)
+// Note: closePool function is not available in the current POOL_ABI
 export function useClosePool() {
   const closePool = useWriteContract();
   const { isLoading, isSuccess, error } = useWaitForTransactionReceipt({
@@ -177,13 +178,9 @@ export function useClosePool() {
 
   const closePoolAction = async (poolAddress: string) => {
     try {
-      await closePool.writeContract({
-        address: poolAddress as `0x${string}`,
-        abi: POOL_ABI,
-        functionName: "closePool",
-        args: [],
-        value: undefined,
-      });
+      // Note: closePool function is not available in the current POOL_ABI
+      // This is a placeholder for future implementation
+      throw new Error("closePool function is not available in the current contract");
     } catch (err) {
       console.error("Error closing pool:", err);
       throw err;

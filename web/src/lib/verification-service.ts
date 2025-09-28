@@ -15,10 +15,59 @@ export interface VerificationResult {
   transactionHash?: string;
   encryptedCID?: string;
   proofHash?: string;
+  lighthouseCID?: string; // Add Lighthouse CID
   error?: string;
 }
 
 class DataFiVerificationService {
+
+  /**
+   * Complete ZK Email verification flow with Lighthouse encryption
+   */
+  async processZKEmailVerification(
+    poolAddress: string,
+    userAddress: string,
+    emlContent: string,
+    verificationType: 'hackerhouse' | 'netflix' = 'hackerhouse'
+  ): Promise<VerificationResult> {
+    try {
+      console.log("🔄 Processing ZK Email verification...");
+
+      // 1. Verify email using ZK email service
+      const emailVerification = await zkEmailService.verifyEmail(emlContent, verificationType);
+      
+      if (!emailVerification.isValid) {
+        throw new Error("Email verification failed");
+      }
+
+      // 2. The ZK email service already stores to Lighthouse and returns CID
+      const lighthouseCID = emailVerification.lighthouseCID;
+      
+      if (!lighthouseCID) {
+        throw new Error("Failed to store verification data to Lighthouse");
+      }
+
+      // 3. Generate proof hash for smart contract
+      const proofHash = emailVerification.proofHash;
+
+      console.log("✅ ZK Email verification completed successfully!");
+      console.log("📦 Lighthouse CID:", lighthouseCID);
+      console.log("🔐 Proof Hash:", proofHash);
+
+      return {
+        success: true,
+        lighthouseCID,
+        proofHash,
+      };
+
+    } catch (error) {
+      console.error("❌ ZK Email verification failed:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error"
+      };
+    }
+  }
 
   /**
    * Complete Self verification flow with Lighthouse encryption
@@ -72,19 +121,46 @@ class DataFiVerificationService {
   }
 
   /**
+   * Get signed message from user for Lighthouse authentication
+   * @param userAddress - User's wallet address
+   */
+  private async getSignedMessage(userAddress: string): Promise<string> {
+    try {
+      // In a real implementation, you would prompt the user to sign a message
+      // For now, we'll create a message that the user should sign
+      const message = `Sign this message to authenticate with Lighthouse for DataFi verification.\nAddress: ${userAddress}\nTimestamp: ${Date.now()}`;
+      
+      // TODO: Implement actual message signing with user's wallet
+      // This would typically use wagmi's useSignMessage hook
+      console.log("⚠️ Message signing not implemented yet. Using placeholder signature.");
+      return `placeholder-signature-${userAddress}-${Date.now()}`;
+    } catch (error) {
+      console.error("Error getting signed message:", error);
+      throw new Error("Failed to get signed message from user");
+    }
+  }
+
+  /**
    * Complete ZK Email verification flow with Lighthouse encryption
    */
   async processZKEmailVerification(
     poolAddress: string,
     userAddress: string,
     emlContent: string,
-    verificationType: 'hackerhouse' | 'netflix' = 'hackerhouse'
+    verificationType: 'hackerhouse' | 'netflix' = 'hackerhouse',
+    poolCreatorAddress?: string
   ): Promise<VerificationResult> {
     try {
       console.log("📧 Processing ZK Email verification...");
 
       // 1. Verify the email using ZK Email with specific type
-      const emailVerification = await zkEmailService.verifyEmail(emlContent, verificationType);
+      const emailVerification = await zkEmailService.verifyEmail(
+        emlContent, 
+        verificationType,
+        userAddress,
+        await this.getSignedMessage(userAddress),
+        poolCreatorAddress
+      );
 
       if (!emailVerification.isValid) {
         throw new Error("Email verification failed");
@@ -96,14 +172,10 @@ class DataFiVerificationService {
         emailVerification.zkProof
       );
 
-      // 3. Encrypt and upload to Lighthouse
-      console.log("🔐 Encrypting email verification data...");
-      const encryptionResult = await lighthouseService.encryptAndUpload(
-        verificationData,
-        poolAddress,
-        userAddress,
-        "0x0000000000000000000000000000000000000000" // Placeholder for pool creator
-      );
+      // 3. Lighthouse encryption and sharing is now handled by ZK email service
+      console.log("🔐 Lighthouse encryption and sharing handled by ZK email service");
+      const lighthouseCID = emailVerification.lighthouseCID;
+      console.log("✅ Lighthouse encryption completed with CID:", lighthouseCID);
 
       // 4. Use the proof hash from ZK Email verification
       const proofHash = emailVerification.proofHash;

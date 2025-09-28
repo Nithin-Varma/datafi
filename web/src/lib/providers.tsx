@@ -5,6 +5,8 @@ import { WagmiProvider } from "wagmi";
 import { RainbowKitProvider, getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { mainnet, polygon, optimism, arbitrum, base, sepolia, baseSepolia } from "wagmi/chains";
 import { WALLETCONNECT_PROJECT_ID } from "./config";
+import { setupZKVerification } from "./zk-integration-example";
+import { useEffect } from "react";
 import "@rainbow-me/rainbowkit/styles.css";
 
 const config = getDefaultConfig({
@@ -25,6 +27,11 @@ const queryClient = new QueryClient({
 });
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  // Initialize ZK circuit on app startup
+  useEffect(() => {
+    setupZKVerification();
+  }, []);
+
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>

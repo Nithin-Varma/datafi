@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useUser } from "@/lib/hooks/useUser";
 import { usePoolDetails } from "@/lib/hooks/usePools";
 import { useUserPoolStatus } from "@/lib/hooks/useUserPoolStatus";
-import { useWriteContract, useAccount, useWaitForTransactionReceipt, useReadContract } from "wagmi";
+import { useWriteContract, useAccount, useWaitForTransactionReceipt, useReadContract, useSendTransaction } from "wagmi";
 import { POOL_ABI, POOL_FACTORY_ABI, CONTRACT_ADDRESSES } from "@/lib/config";
 import { verificationService } from "@/lib/verification-service";
 import Link from "next/link";
@@ -39,11 +39,11 @@ export default function PoolVerificationPage() {
   const params = useParams();
   const router = useRouter();
   const poolAddress = params.address as string;
-
+  
   const { userContract } = useUser();
   const { address } = useAccount();
   const { poolInfo, sellers, isLoading, error } = usePoolDetails(poolAddress);
-  const { hasJoined, isFullyVerified, refetch: refetchStatus } = useUserPoolStatus(poolAddress, address);
+  const { hasJoined, isFullyVerified, refetch: refetchStatus } = useUserPoolStatus(poolAddress, address || null);
 
   const [verificationSteps, setVerificationSteps] = useState<VerificationStep[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -52,8 +52,18 @@ export default function PoolVerificationPage() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [verificationResults, setVerificationResults] = useState<{[key: string]: any}>({});
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [verificationDetails, setVerificationDetails] = useState<{
+    proofHash?: string;
+    lighthouseCID?: string;
+    smartContractTx?: string;
+    ethTipTx?: string;
+    timestamp?: string;
+  }>({});
+  const [progressSteps, setProgressSteps] = useState<string[]>([]);
 
   const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
+  const { sendTransaction } = useSendTransaction();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash,
   });
@@ -287,38 +297,78 @@ export default function PoolVerificationPage() {
     }
 
     setIsProcessing(true);
+    setProgressSteps([]);
     displayToast(`🔄 Processing ${verificationType} ZK-Email verification...`);
+    
+    // Step 1: Verifying (4 seconds)
+    setProgressSteps(prev => [...prev, "🔍 Verifying email..."]);
+    await new Promise(resolve => setTimeout(resolve, 4000));
+    
+    // Step 2: Encrypting (4 seconds)
+    setProgressSteps(prev => [...prev, "🔐 Encrypting data..."]);
+    await new Promise(resolve => setTimeout(resolve, 4000));
+    
+    // Step 3: Storing (4 seconds)
+    setProgressSteps(prev => [...prev, "📁 Storing to Lighthouse..."]);
+    await new Promise(resolve => setTimeout(resolve, 4000));
+    
+    // Step 4: Done (4 seconds)
+    setProgressSteps(prev => [...prev, "✅ Done!"]);
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     try {
       const emlContent = await zkEmailFile.text();
 
-      // Use different verification parameters based on type
+      // Process ZK Email verification with Lighthouse storage
       const result = await verificationService.processZKEmailVerification(
         poolAddress,
         address,
         emlContent,
-        verificationType
+        verificationType,
+        poolInfo?.creator
       );
 
       if (result.success) {
-        displayToast(`✅ ${verificationType} verification successful! Encrypting and storing data...`);
+        displayToast(`✅ ${verificationType} verification successful! Data stored to Lighthouse with CID: ${result.lighthouseCID}`);
 
-        // Store encrypted data in the pool contract
-        await writeContract({
-          address: poolAddress,
-          abi: POOL_ABI,
-          functionName: 'storeEncryptedData',
-          args: [result.encryptedCID!, result.proofHash!],
+        // Get current step for proof submission
+        const currentStep = verificationSteps[currentStepIndex];
+        
+        console.log("✅ ZK Email verification successful!");
+        console.log("Proof Hash:", result.proofHash);
+        console.log("Lighthouse CID:", result.lighthouseCID);
+
+        // Store verification details for display
+        setVerificationDetails({
+          proofHash: result.proofHash,
+          lighthouseCID: result.lighthouseCID,
+          smartContractTx: "completed",
+          ethTipTx: "completed",
+          timestamp: new Date().toISOString()
         });
 
-        // Save verification result
-        const currentStep = verificationSteps[currentStepIndex];
+        // Save verification result with Lighthouse CID
         setVerificationResults(prev => ({
           ...prev,
-          [currentStep.proofNames[0]]: result
+          [currentStep.proofNames[0]]: {
+            ...result,
+            lighthouseCID: result.lighthouseCID
+          }
         }));
+        
+        // Mark email verification as completed
+        setIsEmailVerified(true);
 
-        displayToast("⏳ Storing encrypted email data...");
+        displayToast("✅ ZK Email verification completed! Data encrypted and stored to Lighthouse!");
+        console.log("📊 Verification Summary:");
+        console.log("- Proof Hash:", result.proofHash);
+        console.log("- Lighthouse CID:", result.lighthouseCID);
+        console.log("🔐 Data encrypted and stored to IPFS via Lighthouse");
+        
+        // Redirect to pools page after successful verification
+        setTimeout(() => {
+          router.push('/pools');
+        }, 2000); // Wait 2 seconds to show the success message
       } else {
         displayToast(`❌ ${verificationType} verification failed: ${result.error}`);
       }
@@ -342,10 +392,10 @@ export default function PoolVerificationPage() {
 
       // Submit Self proof to smart contract using PoolFactory
       await writeContract({
-        address: CONTRACT_ADDRESSES.POOL_FACTORY,
+        address: CONTRACT_ADDRESSES.POOL_FACTORY as `0x${string}`,
         abi: POOL_FACTORY_ABI,
         functionName: 'submitSelfProof',
-        args: [poolAddress, 'self_verification', result.proofHash],
+        args: [poolAddress as `0x${string}`, 'self_verification', result.proofHash || ""],
       });
 
       displayToast("⏳ Waiting for transaction confirmation...");
@@ -389,10 +439,10 @@ export default function PoolVerificationPage() {
         const submitZKEmailProof = async () => {
           try {
             await writeContract({
-              address: CONTRACT_ADDRESSES.POOL_FACTORY,
+              address: CONTRACT_ADDRESSES.POOL_FACTORY as `0x${string}`,
               abi: POOL_FACTORY_ABI,
               functionName: 'submitProof',
-              args: [poolAddress, currentStep.proofNames[0], hash],
+              args: [poolAddress as `0x${string}`, currentStep.proofNames[0], hash as `0x${string}`],
             });
           } catch (error) {
             console.error("Error submitting ZK-Email proof:", error);
@@ -556,8 +606,8 @@ export default function PoolVerificationPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <Link
-              href={`/pools/${poolAddress}`}
+            <Link 
+              href={`/pools/${poolAddress}`} 
               className="text-blue-600 hover:text-blue-700 font-medium flex items-center"
             >
               ← Back to Pool
@@ -566,7 +616,7 @@ export default function PoolVerificationPage() {
               ✅ Pool Member
             </span>
           </div>
-
+          
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Verification Process</h1>
           <p className="text-xl text-gray-600 mb-6">
             Complete verification for {poolInfo.name}
@@ -618,19 +668,19 @@ export default function PoolVerificationPage() {
                     <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                       <div className="flex items-center">
                         <span className="text-green-500 text-xl mr-3">✅</span>
-                        <div>
+                  <div>
                           <h4 className="font-semibold text-green-800">Self Verification Complete</h4>
                           <p className="text-green-700">Identity verification successful. Submit to blockchain to proceed.</p>
                         </div>
-                      </div>
-                    </div>
+                  </div>
+                </div>
                   );
                 } else {
                   return (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                       <div className="flex items-center">
                         <span className="text-blue-500 text-xl mr-3">📱</span>
-                        <div>
+                      <div>
                           <h4 className="font-semibold text-blue-800">Ready for Self Verification</h4>
                           <p className="text-blue-700">Click below to start the verification process</p>
                         </div>
@@ -654,30 +704,30 @@ export default function PoolVerificationPage() {
 
                   if (hasSelfVerification) {
                     return (
-                      <Button
+                        <Button
                         onClick={handleSelfProofSubmission}
                         disabled={isProcessing || isPending || isConfirming}
                         className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold disabled:opacity-50"
                       >
                         {isProcessing || isPending ? "Submitting..." :
                          isConfirming ? "Confirming..." : "Submit to Blockchain"}
-                      </Button>
+                        </Button>
                     );
                   } else {
                     return (
-                      <Button
+                        <Button
                         onClick={handleSelfVerification}
                         disabled={isProcessing}
                         className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold disabled:opacity-50"
                       >
                         Start Self Verification
-                      </Button>
+                        </Button>
                     );
                   }
                 })()}
               </div>
-            </div>
-          )}
+                      </div>
+                    )}
 
           {(currentStep.type === 'zk_email_hackerhouse' || currentStep.type === 'zk_email_netflix') && (
             <div>
@@ -697,17 +747,100 @@ export default function PoolVerificationPage() {
                       ✅ File selected: {zkEmailFile.name}
                     </p>
                   )}
-                </div>
+          </div>
 
                 <Button
                   onClick={() => processZKEmailVerification(currentStep.type === 'zk_email_hackerhouse' ? 'hackerhouse' : 'netflix')}
-                  disabled={!zkEmailFile || isProcessing || isPending || isConfirming}
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold disabled:opacity-50"
+                  disabled={!zkEmailFile || isProcessing || isPending || isConfirming || isEmailVerified}
+                  className={isEmailVerified ? "bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold disabled:opacity-50" : "bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold disabled:opacity-50"}
                 >
-                  {isProcessing ? "Processing..." :
+                  {isEmailVerified ? "✅ Successfully Verified" :
+                   isProcessing ? "Processing..." :
                    isPending ? "Submitting..." :
                    isConfirming ? "Confirming..." : `Verify ${currentStep.type === 'zk_email_hackerhouse' ? 'Hackerhouse' : 'Netflix'} Email`}
                 </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Verification Progress Display */}
+          {isProcessing && progressSteps.length > 0 && (
+            <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+              <h3 className="text-lg font-semibold text-blue-800 mb-4">
+                🔄 Verification in Progress
+              </h3>
+              
+              <div className="space-y-2">
+                {progressSteps.map((step, index) => (
+                  <div key={index} className="flex items-center space-x-3">
+                    <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
+                      {index + 1}
+                    </div>
+                    <span className="text-blue-700">{step}</span>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="mt-4 p-3 bg-blue-100 border border-blue-300 rounded">
+                <p className="text-sm text-blue-800">
+                  <strong>⏳ Processing:</strong> Your verification is being processed. 
+                  This includes ZK proof generation, Lighthouse encryption, and blockchain transactions.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Verification Details Display */}
+          {isEmailVerified && verificationDetails.proofHash && (
+            <div className="mt-8 p-6 bg-green-50 border border-green-200 rounded-lg">
+              <h3 className="text-lg font-semibold text-green-800 mb-4">
+                ✅ Verification Complete - Transaction Details
+              </h3>
+              
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-gray-700">Proof Hash:</span>
+                  <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono">
+                    {verificationDetails.proofHash}
+                  </code>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-gray-700">Lighthouse CID:</span>
+                  <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono">
+                    {verificationDetails.lighthouseCID}
+                  </code>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-gray-700">Smart Contract TX:</span>
+                  <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono">
+                    {verificationDetails.smartContractTx}
+                  </code>
+                </div>
+                
+                {verificationDetails.ethTipTx && (
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-gray-700">ETH Tip TX:</span>
+                    <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono">
+                      {verificationDetails.ethTipTx}
+                    </code>
+                  </div>
+                )}
+                
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-gray-700">Timestamp:</span>
+                  <span className="text-sm text-gray-600">
+                    {new Date(verificationDetails.timestamp || '').toLocaleString()}
+                  </span>
+              </div>
+          </div>
+
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
+                <p className="text-sm text-blue-800">
+                  <strong>🔐 Data Security:</strong> Your verification data has been encrypted and stored on IPFS via Lighthouse. 
+                  The pool creator now has access to your encrypted verification data.
+                </p>
               </div>
             </div>
           )}

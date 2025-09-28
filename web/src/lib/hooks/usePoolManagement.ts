@@ -5,7 +5,7 @@ import { POOL_ABI } from "../config";
 import { useJoinPool, useSubmitData, usePurchaseData, useVerifySeller, useClosePool } from "./usePoolActions";
 
 // Hook for managing a specific pool
-export function usePoolManagement(poolAddress: string) {
+export function usePoolManagement(poolAddress: string, userContractAddress?: string) {
   // Get pool info
   const { data: poolInfo, isLoading: poolInfoLoading, error: poolInfoError } = useReadContract({
     address: poolAddress as `0x${string}`,
@@ -28,18 +28,14 @@ export function usePoolManagement(poolAddress: string) {
   });
 
   // Get seller data for a specific seller
+  // Note: getSellerData function is not available in the current POOL_ABI
   const getSellerData = (sellerAddress: string) => {
-    const { data: sellerData, isLoading, error } = useReadContract({
-      address: poolAddress as `0x${string}`,
-      abi: POOL_ABI,
-      functionName: "getSellerData",
-      args: [sellerAddress],
-    });
-
+    // This is a placeholder for future implementation
+    // The getSellerData function is not available in the current contract
     return {
-      sellerData,
-      isLoading,
-      error,
+      sellerData: null,
+      isLoading: false,
+      error: new Error("getSellerData function is not available in the current contract"),
     };
   };
 
@@ -62,7 +58,7 @@ export function usePoolManagement(poolAddress: string) {
     error: poolInfoError || sellersError || verifiedError,
     
     // Actions
-    joinPool: () => joinPool(poolAddress),
+    joinPool: () => userContractAddress ? joinPool(userContractAddress, poolAddress) : () => { throw new Error("User contract address is required to join pool"); },
     submitData: (encryptedData: string) => submitData(poolAddress, encryptedData),
     purchaseData: (value: bigint) => purchaseData(poolAddress, value),
     verifySeller: (sellerAddress: string, verified: boolean) => verifySeller(poolAddress, sellerAddress, verified),
