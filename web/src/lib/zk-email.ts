@@ -33,10 +33,88 @@ export interface EmailVerificationResult {
 
 class ZKEmailService {
   /**
-   * Process and verify an EML file for hackerhouse participation
+   * Process and verify an EML file with specific verification parameters
    * @param emlContent - Raw EML file content as string
-   * @param expectedDomain - Expected sender domain (e.g., 'devfolio.co')
-   * @param expectedKeywords - Keywords to look for in email (e.g., ['hackerhouse', 'invitation'])
+   * @param verificationType - Type of verification ('hackerhouse' or 'netflix')
+   */
+  async verifyEmail(
+    emlContent: string,
+    verificationType: 'hackerhouse' | 'netflix' = 'hackerhouse'
+  ): Promise<EmailVerificationResult> {
+    const verificationParams = this.getVerificationParams(verificationType);
+
+    try {
+      // Parse EML content to extract email components
+      const emailData = this.parseEMLContent(emlContent);
+
+      // Validate the email is from expected domain
+      if (!this.validateDomain(emailData.from, verificationParams.expectedDomains)) {
+        throw new Error(`Email not from expected domain: ${verificationParams.expectedDomains.join(', ')}`);
+      }
+
+      // Check for verification-specific keywords
+      const hasKeywords = verificationParams.expectedKeywords.some(keyword =>
+        emailData.subject.toLowerCase().includes(keyword.toLowerCase()) ||
+        emailData.body.toLowerCase().includes(keyword.toLowerCase())
+      );
+
+      if (!hasKeywords) {
+        throw new Error(`Email does not contain ${verificationType}-related keywords`);
+      }
+
+      // Generate ZK proof inputs
+      const zkInputs = await generateEmailVerifierInputs(emlContent, {
+        maxHeaderLength: 1024,
+        maxBodyLength: 2048,
+        ignoreBodyHashCheck: false
+      });
+
+      // Create a verification-specific proof hash
+      const proofHash = this.generateProofHash(emailData, zkInputs, verificationType);
+
+      // Simulate ZK proof generation (in production, this would call actual ZK circuits)
+      const zkProof: ZKEmailProof = {
+        proof: this.generateMockProof(zkInputs),
+        publicSignals: [
+          zkInputs.emailHeader.toString(),
+          zkInputs.emailBody.toString(),
+          zkInputs.publicKey.toString()
+        ],
+        emailHash: zkInputs.bodyHash.toString(),
+        domainHash: this.hashDomain(verificationParams.expectedDomains[0])
+      };
+
+      return {
+        isValid: true,
+        proofHash,
+        emailData,
+        zkProof
+      };
+
+    } catch (error) {
+      console.error(`Error verifying ${verificationType} email:`, error);
+      return {
+        isValid: false,
+        proofHash: "",
+        emailData: {
+          from: "",
+          to: "",
+          subject: "",
+          body: "",
+          timestamp: ""
+        },
+        zkProof: {
+          proof: "",
+          publicSignals: [],
+          emailHash: "",
+          domainHash: ""
+        }
+      };
+    }
+  }
+
+  /**
+   * Legacy method for backwards compatibility
    */
   async verifyHackerhouseEmail(
     emlContent: string,
@@ -163,16 +241,51 @@ class ZKEmailService {
   }
 
   /**
+   * Get verification parameters based on type
+   * @param verificationType - Type of verification
+   */
+  private getVerificationParams(verificationType: 'hackerhouse' | 'netflix') {
+    switch (verificationType) {
+      case 'hackerhouse':
+        return {
+          expectedDomains: ['devfolio.co', 'ethglobal.com', 'hackerhouse.com'],
+          expectedKeywords: ['hackerhouse', 'invitation', 'ETH Delhi', 'selected', 'participant']
+        };
+      case 'netflix':
+        return {
+          expectedDomains: ['netflix.com', 'info@netflix.com', 'noreply@netflix.com'],
+          expectedKeywords: ['netflix', 'subscription', 'billing', 'payment', 'plan', 'premium']
+        };
+      default:
+        return {
+          expectedDomains: ['devfolio.co'],
+          expectedKeywords: ['hackerhouse', 'invitation']
+        };
+    }
+  }
+
+  /**
+   * Validate if email is from expected domain
+   * @param fromField - Email from field
+   * @param expectedDomains - Array of expected domains
+   */
+  private validateDomain(fromField: string, expectedDomains: string[]): boolean {
+    return expectedDomains.some(domain => fromField.toLowerCase().includes(domain.toLowerCase()));
+  }
+
+  /**
    * Generate a unique proof hash for the email
    * @param emailData - Parsed email data
    * @param zkInputs - ZK inputs
+   * @param verificationType - Type of verification
    */
-  private generateProofHash(emailData: any, zkInputs: any): string {
+  private generateProofHash(emailData: any, zkInputs: any, verificationType?: string): string {
     const dataToHash = JSON.stringify({
       from: emailData.from,
       subject: emailData.subject,
       bodyHash: zkInputs.bodyHash.toString(),
-      timestamp: emailData.timestamp
+      timestamp: emailData.timestamp,
+      verificationType: verificationType || 'default'
     });
 
     // Simple hash function (in production, use keccak256 or similar)

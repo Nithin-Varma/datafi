@@ -331,6 +331,16 @@ export const POOL_ABI = [
   },
   {
     "inputs": [
+      {"name": "_encryptedCID", "type": "string"},
+      {"name": "_accessCondition", "type": "bytes32"}
+    ],
+    "name": "storeEncryptedData",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
       {"name": "_proofName", "type": "string"},
       {"name": "_proofHash", "type": "bytes32"}
     ],
@@ -449,6 +459,20 @@ export const POOL_ABI = [
     "inputs": [],
     "name": "getVerifiedSellersCount",
     "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "transferAccessToBuyer",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "_buyer", "type": "address"}],
+    "name": "getBuyerAccessibleCIDs",
+    "outputs": [{"name": "", "type": "string[]"}],
     "stateMutability": "view",
     "type": "function"
   }

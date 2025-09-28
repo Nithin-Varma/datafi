@@ -77,13 +77,14 @@ class DataFiVerificationService {
   async processZKEmailVerification(
     poolAddress: string,
     userAddress: string,
-    emlContent: string
+    emlContent: string,
+    verificationType: 'hackerhouse' | 'netflix' = 'hackerhouse'
   ): Promise<VerificationResult> {
     try {
       console.log("📧 Processing ZK Email verification...");
 
-      // 1. Verify the email using ZK Email
-      const emailVerification = await zkEmailService.verifyHackerhouseEmail(emlContent);
+      // 1. Verify the email using ZK Email with specific type
+      const emailVerification = await zkEmailService.verifyEmail(emlContent, verificationType);
 
       if (!emailVerification.isValid) {
         throw new Error("Email verification failed");

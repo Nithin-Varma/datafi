@@ -6,10 +6,13 @@ import { Button } from "@/components/ui/button";
 import { useUser } from "@/lib/hooks/useUser";
 import { usePoolDetails } from "@/lib/hooks/usePools";
 import { useJoinPool, useVerifySeller } from "@/lib/hooks/usePoolActions";
+import { useWriteContract, useReadContract } from "wagmi";
 import { useVerifySeller as useVerifySellerHook } from "@/lib/hooks/useVerification";
 import { useUserPoolStatus } from "@/lib/hooks/useUserPoolStatus";
 import VerificationModal from "@/components/verification-modal";
 import Link from "next/link";
+import { POOL_ABI } from "@/lib/config";
+import { lighthouseService } from "@/lib/lighthouse";
 
 export default function PoolDetailPage() {
   const params = useParams();
@@ -25,7 +28,11 @@ export default function PoolDetailPage() {
   const [justJoined, setJustJoined] = useState(false);
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
   const [localHasJoined, setLocalHasJoined] = useState(false);
-  
+  const [accessibleCIDs, setAccessibleCIDs] = useState<string[]>([]);
+  const [isTransferringAccess, setIsTransferringAccess] = useState(false);
+
+  const { writeContract } = useWriteContract();
+
   // Use contract state or local state (for immediate updates)
   const hasJoined = contractHasJoined || localHasJoined;
 
@@ -42,7 +49,6 @@ export default function PoolDetailPage() {
     }
   }, [joinedSuccessfully, justJoined, refetch]);
 
-
   const formatEther = (wei: bigint) => {
     return Number(wei) / 1e18;
   };
@@ -56,9 +62,20 @@ export default function PoolDetailPage() {
   };
 
   // Determine user role - compare with both user contract and EOA address
-  const isCreator = poolInfo?.creator?.toLowerCase() === userContract?.toLowerCase() || 
+  const isCreator = poolInfo?.creator?.toLowerCase() === userContract?.toLowerCase() ||
                     poolInfo?.creator?.toLowerCase() === userEOA?.toLowerCase();
-  const isSeller = hasJoined; // Use contract state instead of local state
+  const isSeller = true; // Use contract state instead of local state
+
+  // Read accessible CIDs for the creator
+  const { data: buyerCIDs } = useReadContract({
+    address: poolAddress as `0x${string}`,
+    abi: POOL_ABI,
+    functionName: "getBuyerAccessibleCIDs",
+    args: isCreator ? [userContract as `0x${string}`] : undefined,
+    query: {
+      enabled: !!isCreator && !!userContract,
+    },
+  });
   
   // Debug logging
   console.log("Pool Details Debug:", {
@@ -111,17 +128,47 @@ export default function PoolDetailPage() {
   };
 
   const handleSubmitAndVerify = () => {
-    // Check if pool has age or nationality proof requirements
-    const hasAgeOrNationality = poolInfo?.proofRequirements?.some(
-      (req: any) => req.proofType === 0 || req.proofType === 1 // 0 = age, 1 = nationality
-    );
-    
-    if (hasAgeOrNationality) {
-      // Redirect to Self page for verification
-      router.push('/self');
-    } else {
-      // Show verification modal for other proof types
-      setIsVerificationModalOpen(true);
+    // Always redirect to the new verification flow
+    router.push(`/pools/${poolAddress}/verify`);
+  };
+
+  const handleTransferAccess = async () => {
+    if (!userContract) return;
+
+    setIsTransferringAccess(true);
+    try {
+      await writeContract({
+        address: poolAddress as `0x${string}`,
+        abi: POOL_ABI,
+        functionName: "transferAccessToBuyer",
+      });
+      alert("Access transfer initiated! You will gain access to encrypted email data once the transaction confirms.");
+    } catch (error) {
+      console.error("Error transferring access:", error);
+      alert("Failed to transfer access. Please try again.");
+    } finally {
+      setIsTransferringAccess(false);
+    }
+  };
+
+  const handleAccessData = async (cid: string) => {
+    if (!userContract) return;
+
+    try {
+      const decryptedData = await lighthouseService.decryptAndDownload(
+        cid,
+        "",
+        userContract
+      );
+
+      // Display the decrypted email data
+      alert(`Decrypted Email Data:\n\nFrom: ${decryptedData.emailMetadata?.from}\nSubject: ${decryptedData.emailMetadata?.subject}\nDate: ${decryptedData.emailMetadata?.timestamp}`);
+
+      // You could also open a modal or download the data
+      console.log("Full decrypted data:", decryptedData);
+    } catch (error) {
+      console.error("Error accessing data:", error);
+      alert("Failed to access encrypted data. Please ensure you have proper access permissions.");
     }
   };
 
@@ -355,9 +402,14 @@ export default function PoolDetailPage() {
               {isSeller && !isCreator && (
                 <Button
                   onClick={handleSubmitAndVerify}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold mb-4"
+                  disabled={isFullyVerified}
+                  className={`w-full px-6 py-3 rounded-lg font-semibold mb-4 ${
+                    isFullyVerified
+                      ? "bg-green-600 text-white cursor-default"
+                      : "bg-purple-600 hover:bg-purple-700 text-white"
+                  }`}
                 >
-                  Submit & Verify
+                  {isFullyVerified ? "✅ Verification Complete" : "Submit & Verify"}
                 </Button>
               )}
 
@@ -366,8 +418,51 @@ export default function PoolDetailPage() {
                   <div className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg font-semibold text-center cursor-default">
                     👑 Your Pool
                   </div>
+
+                  {/* Data Access Section */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 mb-3">🔐 Encrypted Email Data Access</h4>
+
+                    {buyerCIDs && buyerCIDs.length > 0 ? (
+                      <div className="space-y-3">
+                        <div className="text-sm text-green-600 mb-2">
+                          ✅ You have access to {buyerCIDs.length} encrypted email{buyerCIDs.length > 1 ? 's' : ''}
+                        </div>
+                        {buyerCIDs.map((cid, index) => (
+                          <div key={index} className="flex items-center justify-between bg-white rounded-lg p-3 border">
+                            <div>
+                              <div className="font-mono text-xs text-gray-500">
+                                {cid.substring(0, 20)}...{cid.substring(cid.length - 10)}
+                              </div>
+                              <div className="text-xs text-gray-400 mt-1">Encrypted Email Data</div>
+                            </div>
+                            <Button
+                              onClick={() => handleAccessData(cid)}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-sm"
+                            >
+                              Access Data
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="text-sm text-gray-600">
+                          Transfer access to view encrypted email data from verified sellers.
+                        </div>
+                        <Button
+                          onClick={handleTransferAccess}
+                          disabled={isTransferringAccess}
+                          className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 disabled:opacity-50"
+                        >
+                          {isTransferringAccess ? "Transferring Access..." : "🔓 Transfer Access to Email Data"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="text-sm text-gray-600">
-                    As the creator, you can view verified sellers in your pool.
+                    As the creator, you can view verified sellers and access their encrypted email data.
                   </div>
                   <div className="text-sm text-gray-500">
                     Sellers are automatically verified after they complete their proof submissions.

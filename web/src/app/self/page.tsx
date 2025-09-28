@@ -197,8 +197,12 @@ export default function Home() {
         // Store the verification result in localStorage for later use
         localStorage.setItem('selfVerificationResult', JSON.stringify(result));
 
+        // Check for redirect URL parameter
+        const redirectUrl = urlParams.get('redirect');
+        const targetUrl = redirectUrl ? decodeURIComponent(redirectUrl) : "/dashboard";
+
         setTimeout(() => {
-          router.push("/dashboard");
+          router.push(targetUrl);
         }, 2000);
       } else {
         displayToast("❌ Failed to store verification data: " + result.error);
@@ -208,9 +212,13 @@ export default function Home() {
       console.error("Verification processing error:", error);
       displayToast("❌ Error processing verification");
 
-      // Still redirect to dashboard after a delay
+      // Still redirect after a delay
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirectUrl = urlParams.get('redirect');
+      const targetUrl = redirectUrl ? decodeURIComponent(redirectUrl) : "/dashboard";
+
       setTimeout(() => {
-        router.push("/dashboard");
+        router.push(targetUrl);
       }, 1500);
     }
   };
